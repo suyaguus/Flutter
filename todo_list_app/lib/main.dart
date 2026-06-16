@@ -34,12 +34,12 @@ class TodoListPage extends StatefulWidget {
 // membuat todo list dinamis
 class _TodoListPageState extends State<TodoListPage> {
   // membuat tempat meyimpan data list sementara
-  List<String> todoList = [
-    'Belajar Flutter',
-    'Membuat Aplikasi Todo',
-    'Test Aplikasi',
-    'Debug Aplikasi',
-    'Deploy Aplikasi',
+  List<Todo> todoList = [
+    Todo(judul: 'Belajar Flutter'),
+    Todo(judul: 'Membuat Aplikasi Todo'),
+    Todo(judul: 'Test Aplikasi'),
+    Todo(judul: 'Debug Aplikasi'),
+    Todo(judul: 'Deploy Aplikasi'),
   ];
 
   // controller untuk mengambil teks yang di inputkan
@@ -76,7 +76,7 @@ class _TodoListPageState extends State<TodoListPage> {
                   // ada data yang berubah dan layar harus digambar ulang.
                   setState(() {
                     // Tambahkan teks ke array list
-                    todoList.add(_taskController.text);
+                    todoList.add(Todo(judul: _taskController.text));
                   });
                   // Bersihkan inputan untuk pemakaian berikutnya
                   _taskController.clear();
@@ -108,8 +108,38 @@ class _TodoListPageState extends State<TodoListPage> {
         itemCount: todoList.length,
         itemBuilder: (context, index) {
           return ListTile(
-            leading: const Icon(Icons.check_box_outline_blank),
-            title: Text(todoList[index]),
+            // checkbox interaktif
+            leading: Checkbox(
+              value: todoList[index].isSelesai, // ambil status dari data
+              onChanged: (bool? nilaiBaru) {
+                // saat dicentang/dihilangkan centangnya, perbarui status dan render ulang layar
+                setState(() {
+                  todoList[index].isSelesai = nilaiBaru!;
+                });
+              },
+            ),
+
+            // judul
+            title: Text(
+              todoList[index].judul,
+              style: TextStyle(
+                decoration: todoList[index].isSelesai
+                    ? TextDecoration
+                          .lineThrough // efekcoretan
+                    : TextDecoration.none,
+              ),
+            ),
+
+            // tombol hapus di sebelah kanan
+            trailing: IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red),
+              onPressed: () {
+                // saat tombol sampah ditekan, hapus item dari list
+                setState(() {
+                  todoList.removeAt(index);
+                });
+              },
+            ),
           );
         },
       ),
@@ -125,62 +155,11 @@ class _TodoListPageState extends State<TodoListPage> {
   }
 }
 
-// halaman pertama aplikasi
-// class _TodoListPageState extends State<TodoListPage> {
-//   // const TodoListPage({super.key});
+// class untuk mencetak salinan untuk list todo
+class Todo {
+  String judul;
+  bool isSelesai; // true jika sudah dicentang , false jika belum
 
-//   // membuat tempat untuk menyimpan list sementara
-//   List<String> todoList = [
-//     'Belajar Flutter',
-//     'Membuat Aplikasi Todo',
-//     'Test Aplikasi',
-//     'Debug Aplikasi',
-//     'Deploy Aplikasi',
-//   ];
-
-//   @override
-//   Widget build(BuildContext context) {
-//     // Scaffold adalah struktur dasar halaman (layar putih kosong)
-//     return Scaffold(
-//       // appbar
-//       appBar: AppBar(
-//         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-//         title: const Text('My Todo List'),
-//       ),
-
-//       // body
-//       // body: const Center(
-//       //   // Center digunakan untuk menengahkan widget di dalamnya
-//       //   child: Text('Belum ada List Hari ini!', style: TextStyle(fontSize: 20)),
-//       // ),
-
-//       // mengganti center dan text dengan listView.builder
-//       body: ListView.builder(
-//         // menghitung berapa jumlah list yang ada
-//         itemCount: todoList.length,
-
-//         // itemBuilder akan dipanggil berkali-kali sebanyak jumlah list yang ada (5 kali)
-//         itemBuilder: (context, index) {
-//           // ListTile adalah widget bawaan untuk baris daftar yang rapi
-//           return ListTile(
-//             // ikon kotak kosong dikiri
-//             leading: const Icon(Icons.check_box_outline_blank),
-//             // menampilkan teks sesuai dengan urutan array
-//             title: Text(todoList[index]),
-//           );
-//         },
-//       ),
-
-//       // floating button
-//       floatingActionButton: FloatingActionButton(
-//         onPressed: () {
-//           // aksi ketika tombol ditekan (via terminal)
-//           print("Tombol Tambah Ditekan!");
-//         },
-//         tooltip: 'Tambah List',
-//         // menampilkan icon plus
-//         child: const Icon(Icons.add),
-//       ),
-//     );
-//   }
-// }
+  // constructor
+  Todo({required this.judul, this.isSelesai = false});
+}
