@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const MyApp());
@@ -34,16 +36,38 @@ class TodoListPage extends StatefulWidget {
 // membuat todo list dinamis
 class _TodoListPageState extends State<TodoListPage> {
   // membuat tempat meyimpan data list sementara
-  List<Todo> todoList = [
-    Todo(judul: 'Belajar Flutter'),
-    Todo(judul: 'Membuat Aplikasi Todo'),
-    Todo(judul: 'Test Aplikasi'),
-    Todo(judul: 'Debug Aplikasi'),
-    Todo(judul: 'Deploy Aplikasi'),
-  ];
+  List<Todo> todoList = [];
 
   // controller untuk mengambil teks yang di inputkan
   final TextEditingController _taskController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _muatData();
+  }
+
+  // Fungsi untuk menyimpan data ke memori
+  Future<void> _simpanData() async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> listString = todoList
+        .map((todo) => jsonEncode(todo.toMap()))
+        .toList();
+    await prefs.setStringList('data_todo', listString);
+  }
+
+  Future<void> _muatData() async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String>? listString = prefs.getStringList('data_todo');
+
+    if (listString != null) {
+      setState(() {
+        todoList = listString
+            .map((item) => Todo.fromMap(jsonDecode(item)))
+            .toList();
+      });
+    }
+  }
 
   // fungsi untuk memunculkan popup dialog
   void _tambahList() {
@@ -77,6 +101,7 @@ class _TodoListPageState extends State<TodoListPage> {
                   setState(() {
                     // Tambahkan teks ke array list
                     todoList.add(Todo(judul: _taskController.text));
+                    _simpanData();
                   });
                   // Bersihkan inputan untuk pemakaian berikutnya
                   _taskController.clear();
@@ -102,47 +127,6 @@ class _TodoListPageState extends State<TodoListPage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('My Todo List'),
       ),
-
-      // body
-      // body: ListView.builder(
-      //   itemCount: todoList.length,
-      //   itemBuilder: (context, index) {
-      //     return ListTile(
-      //       // checkbox interaktif
-      //       leading: Checkbox(
-      //         value: todoList[index].isSelesai, // ambil status dari data
-      //         onChanged: (bool? nilaiBaru) {
-      //           // saat dicentang/dihilangkan centangnya, perbarui status dan render ulang layar
-      //           setState(() {
-      //             todoList[index].isSelesai = nilaiBaru!;
-      //           });
-      //         },
-      //       ),
-
-      //       // judul
-      //       title: Text(
-      //         todoList[index].judul,
-      //         style: TextStyle(
-      //           decoration: todoList[index].isSelesai
-      //               ? TextDecoration
-      //                     .lineThrough // efekcoretan
-      //               : TextDecoration.none,
-      //         ),
-      //       ),
-
-      //       // tombol hapus di sebelah kanan
-      //       trailing: IconButton(
-      //         icon: const Icon(Icons.delete, color: Colors.red),
-      //         onPressed: () {
-      //           // saat tombol sampah ditekan, hapus item dari list
-      //           setState(() {
-      //             todoList.removeAt(index);
-      //           });
-      //         },
-      //       ),
-      //     );
-      //   },
-      // ),
 
       // body.
       body: todoList.isEmpty
@@ -187,6 +171,7 @@ class _TodoListPageState extends State<TodoListPage> {
                       onChanged: (bool? nilaiBaru) {
                         setState(() {
                           todoList[index].isSelesai = nilaiBaru!;
+                          _simpanData();
                         });
                       },
                     ),
@@ -205,16 +190,22 @@ class _TodoListPageState extends State<TodoListPage> {
                         String judulDihapus = todoList[index].judul;
                         setState(() {
                           todoList.removeAt(index);
+                          _simpanData();
                         });
                         // Memunculkan Snackbar (Notifikasi bawah)
-                        ScaffoldMessenger.of(context).clearSnackBars(); // Bersihkan pesan lama jika ada
+                        ScaffoldMessenger.of(
+                          context,
+                        ).clearSnackBars(); // Bersihkan pesan lama jika ada
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
                               'List "$judulDihapus" telah dihapus!',
                             ),
-                            duration: const Duration(seconds: 2), // Lama pesan muncul
-                            behavior: SnackBarBehavior.floating, //  Pesannya sedikit melayang
+                            duration: const Duration(
+                              seconds: 2,
+                            ), // Lama pesan muncul
+                            behavior: SnackBarBehavior
+                                .floating, //  Pesannya sedikit melayang
                           ),
                         );
                       },
@@ -242,4 +233,12 @@ class Todo {
 
   // constructor
   Todo({required this.judul, this.isSelesai = false});
+
+  Map<String, dynamic> toMap() {
+    return {'judul': judul, 'isSelesai': isSelesai};
+  }
+
+  factory Todo.fromMap(Map<String, dynamic> map) {
+    return Todo(judul: map['judul'], isSelesai: map['isSelesai']);
+  }
 }
