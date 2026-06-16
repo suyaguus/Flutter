@@ -104,45 +104,125 @@ class _TodoListPageState extends State<TodoListPage> {
       ),
 
       // body
-      body: ListView.builder(
-        itemCount: todoList.length,
-        itemBuilder: (context, index) {
-          return ListTile(
-            // checkbox interaktif
-            leading: Checkbox(
-              value: todoList[index].isSelesai, // ambil status dari data
-              onChanged: (bool? nilaiBaru) {
-                // saat dicentang/dihilangkan centangnya, perbarui status dan render ulang layar
-                setState(() {
-                  todoList[index].isSelesai = nilaiBaru!;
-                });
-              },
-            ),
+      // body: ListView.builder(
+      //   itemCount: todoList.length,
+      //   itemBuilder: (context, index) {
+      //     return ListTile(
+      //       // checkbox interaktif
+      //       leading: Checkbox(
+      //         value: todoList[index].isSelesai, // ambil status dari data
+      //         onChanged: (bool? nilaiBaru) {
+      //           // saat dicentang/dihilangkan centangnya, perbarui status dan render ulang layar
+      //           setState(() {
+      //             todoList[index].isSelesai = nilaiBaru!;
+      //           });
+      //         },
+      //       ),
 
-            // judul
-            title: Text(
-              todoList[index].judul,
-              style: TextStyle(
-                decoration: todoList[index].isSelesai
-                    ? TextDecoration
-                          .lineThrough // efekcoretan
-                    : TextDecoration.none,
+      //       // judul
+      //       title: Text(
+      //         todoList[index].judul,
+      //         style: TextStyle(
+      //           decoration: todoList[index].isSelesai
+      //               ? TextDecoration
+      //                     .lineThrough // efekcoretan
+      //               : TextDecoration.none,
+      //         ),
+      //       ),
+
+      //       // tombol hapus di sebelah kanan
+      //       trailing: IconButton(
+      //         icon: const Icon(Icons.delete, color: Colors.red),
+      //         onPressed: () {
+      //           // saat tombol sampah ditekan, hapus item dari list
+      //           setState(() {
+      //             todoList.removeAt(index);
+      //           });
+      //         },
+      //       ),
+      //     );
+      //   },
+      // ),
+
+      // body.
+      body: todoList.isEmpty
+          // JIKA KOSONG: Tampilkan Empty State
+          ? Center(
+              child: Column(
+                mainAxisAlignment:
+                    MainAxisAlignment.center, // Pusatkan secara vertikal
+                children: const [
+                  Icon(
+                    Icons.assignment_turned_in,
+                    size: 80,
+                    color: Colors.grey,
+                  ),
+                  SizedBox(
+                    height: 16,
+                  ), // Memberi jarak kosong antara ikon dan teks
+                  Text(
+                    'Semua Tugas Sudah Selesai!',
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                  ),
+                ],
               ),
-            ),
-
-            // tombol hapus di sebelah kanan
-            trailing: IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red),
-              onPressed: () {
-                // saat tombol sampah ditekan, hapus item dari list
-                setState(() {
-                  todoList.removeAt(index);
-                });
+            )
+          // JIKA ADA ISINYA: Tampilkan ListView
+          : ListView.builder(
+              itemCount: todoList.length,
+              itemBuilder: (context, index) {
+                // Membungkus ListTile dengan Card
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ), // Jarak luar kartu
+                  elevation: 2, // Efek bayangan (shadow) agar terlihat melayang
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ), // Membuat ujung kartu sedikit membulat
+                  child: ListTile(
+                    leading: Checkbox(
+                      value: todoList[index].isSelesai,
+                      onChanged: (bool? nilaiBaru) {
+                        setState(() {
+                          todoList[index].isSelesai = nilaiBaru!;
+                        });
+                      },
+                    ),
+                    title: Text(
+                      todoList[index].judul,
+                      style: TextStyle(
+                        decoration: todoList[index].isSelesai
+                            ? TextDecoration.lineThrough
+                            : TextDecoration.none,
+                      ),
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      // Simpan judulnya dulu sebelum dihapus untuk ditampilkan di pesan
+                      onPressed: () {
+                        String judulDihapus = todoList[index].judul;
+                        setState(() {
+                          todoList.removeAt(index);
+                        });
+                        // Memunculkan Snackbar (Notifikasi bawah)
+                        ScaffoldMessenger.of(context).clearSnackBars(); // Bersihkan pesan lama jika ada
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'List "$judulDihapus" telah dihapus!',
+                            ),
+                            duration: const Duration(seconds: 2), // Lama pesan muncul
+                            behavior: SnackBarBehavior.floating, //  Pesannya sedikit melayang
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                );
               },
             ),
-          );
-        },
-      ),
 
       // button action
       floatingActionButton: FloatingActionButton(
