@@ -124,6 +124,57 @@ class _TodoListPageState extends State<TodoListPage> {
     );
   }
 
+  // konfrimasi hapus
+  // Fungsi untuk memunculkan popup konfirmasi hapus
+  void _konfirmasiHapus(int index) {
+    // Ambil judul untuk ditampilkan di pesan popup
+    String judulYangAkanDihapus = todoList[index].judul;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Konfirmasi Hapus'),
+          content: Text(
+            'Apakah Anda yakin ingin menghapus "$judulYangAkanDihapus"?',
+          ),
+          actions: [
+            // Tombol Batal
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Tutup dialog tanpa menghapus
+              },
+              child: const Text('Batal'),
+            ),
+            // Tombol Hapus (Berwarna merah agar hati-hati)
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  todoList.removeAt(index); // Eksekusi hapus list
+                  _simpanData(); // Simpan perubahan
+                });
+                Navigator.of(context).pop(); // Tutup dialog
+
+                // Munculkan notifikasi Snackbar
+                ScaffoldMessenger.of(context).clearSnackBars();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'List "$judulYangAkanDihapus" telah dihapus!',
+                    ),
+                    duration: const Duration(seconds: 2),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
+              child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
