@@ -179,25 +179,43 @@ class _TodoListPageState extends State<TodoListPage> {
                             : TextDecoration.none,
                       ),
                     ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () {
-                        String judulDihapus = todoList[index].judul;
-                        setState(() {
-                          todoList.removeAt(index);
-                          _simpanData();
-                        });
-                        ScaffoldMessenger.of(context).clearSnackBars();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'List "$judulDihapus" telah dihapus!',
-                            ),
-                            duration: const Duration(seconds: 2),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      },
+                    // Membungkus tombol Edit & Delete dalam satu baris (Row)
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize
+                          .min, // Agar Row hanya memakan tempat sebesar tombol saja
+                      children: [
+                        // Tombol Edit (Pensil Biru)
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.blue),
+                          onPressed: () {
+                            _editList(
+                              index,
+                            ); // Panggil fungsi edit dengan index saat ini
+                          },
+                        ),
+
+                        // Tombol Delete (Sampah Merah)
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () {
+                            String judulDihapus = todoList[index].judul;
+                            setState(() {
+                              todoList.removeAt(index);
+                              _simpanData();
+                            });
+                            ScaffoldMessenger.of(context).clearSnackBars();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'List "$judulDihapus" telah dihapus!',
+                                ),
+                                duration: const Duration(seconds: 2),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                     ),
                   ),
                 );
