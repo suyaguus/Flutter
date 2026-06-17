@@ -249,21 +249,9 @@ class _TodoListPageState extends State<TodoListPage> {
                         IconButton(
                           icon: const Icon(Icons.delete, color: Colors.red),
                           onPressed: () {
-                            String judulDihapus = todoList[index].judul;
-                            setState(() {
-                              todoList.removeAt(index);
-                              _simpanData();
-                            });
-                            ScaffoldMessenger.of(context).clearSnackBars();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'List "$judulDihapus" telah dihapus!',
-                                ),
-                                duration: const Duration(seconds: 2),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
+                            _konfirmasiHapus(
+                              index,
+                            ); // Panggil fungsi konfirmasi hapus
                           },
                         ),
                       ],
