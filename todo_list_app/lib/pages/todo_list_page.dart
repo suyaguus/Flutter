@@ -11,7 +11,6 @@ class TodoListPage extends StatefulWidget {
 }
 
 class _TodoListPageState extends State<TodoListPage> {
-  
   // (Potongan kode di bawah ini sengaja disingkat agar Anda tinggal copy-paste/cut dari file lama)
   List<Todo> todoList = [];
   final TextEditingController _taskController = TextEditingController();
@@ -22,6 +21,7 @@ class _TodoListPageState extends State<TodoListPage> {
     _muatData();
   }
 
+  // simpan list
   Future<void> _simpanData() async {
     final prefs = await SharedPreferences.getInstance();
     List<String> listString = todoList
@@ -30,6 +30,7 @@ class _TodoListPageState extends State<TodoListPage> {
     await prefs.setStringList('data_todo', listString);
   }
 
+  // baca list
   Future<void> _muatData() async {
     final prefs = await SharedPreferences.getInstance();
     List<String>? listString = prefs.getStringList('data_todo');
@@ -43,6 +44,7 @@ class _TodoListPageState extends State<TodoListPage> {
     }
   }
 
+  // tambah list
   void _tambahList() {
     showDialog(
       context: context,
@@ -69,6 +71,49 @@ class _TodoListPageState extends State<TodoListPage> {
                   });
                   _taskController.clear();
                   Navigator.of(context).pop();
+                }
+              },
+              child: const Text('Simpan'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // edit list
+  // Fungsi untuk memunculkan popup dialog Edit
+  void _editList(int index) {
+    // Isi TextField dengan judul tugas yang sedang ditekan
+    _taskController.text = todoList[index].judul;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Edit Tugas'),
+          content: TextField(
+            controller: _taskController,
+            decoration: const InputDecoration(hintText: 'Ubah teks tugas:'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                _taskController.clear(); // Bersihkan memori controller
+                Navigator.of(context).pop();
+              },
+              child: const Text('Batal'),
+            ),
+            TextButton(
+              onPressed: () {
+                if (_taskController.text.isNotEmpty) {
+                  setState(() {
+                    // Update judul list pada index yang dipilih
+                    todoList[index].judul = _taskController.text;
+                    _simpanData(); // Simpan perubahan ke memori hp
+                  });
+                  _taskController.clear(); // Bersihkan memori
+                  Navigator.of(context).pop(); // Tutup dialog
                 }
               },
               child: const Text('Simpan'),
