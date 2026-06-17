@@ -15,6 +15,31 @@ class _TodoListPageState extends State<TodoListPage> {
   List<Todo> todoList = [];
   final TextEditingController _taskController = TextEditingController();
 
+  // untuk filter dan shorting
+  String filterPrioritas =
+      'Semua'; // Opsi: Semua, Penting, Mendesak, Tidak Mendesak
+  bool sortDeadlineTerdekat = false;
+
+  // Fungsi "Penyaring Cerdas" yang menggabungkan Filter & Sorting
+  List<Todo> get listYangDitampilkan {
+    // 1. Saring berdasarkan prioritas
+    List<Todo> hasil = todoList.where((todo) {
+      if (filterPrioritas == 'Semua') return true;
+      return todo.prioritas == filterPrioritas;
+    }).toList();
+
+    // 2. Urutkan berdasarkan tanggal terdekat
+    if (sortDeadlineTerdekat) {
+      hasil.sort((a, b) {
+        if (a.deadline == null && b.deadline == null) return 0;
+        if (a.deadline == null) return 1; // Yang kosong ditaruh paling bawah
+        if (b.deadline == null) return -1;
+        return a.deadline!.compareTo(b.deadline!);
+      });
+    }
+    return hasil;
+  }
+
   @override
   void initState() {
     super.initState();
