@@ -541,6 +541,11 @@ class _TodoListPageState extends State<TodoListPage> {
                         child: ListTile(
                           leading: Checkbox(
                             value: item.isSelesai,
+                            // Tambahkan baris ini agar pinggiran kotak selalu berwarna gelap
+                            side: const BorderSide(
+                              color: Colors.black54,
+                              width: 2,
+                            ),
                             onChanged: (bool? nilaiBaru) {
                               setState(() {
                                 todoList[realIndex].isSelesai = nilaiBaru!;
@@ -548,19 +553,26 @@ class _TodoListPageState extends State<TodoListPage> {
                               });
                             },
                           ),
+
                           title: Text(
                             item.judul,
                             style: TextStyle(
+                              // Tambahkan baris ini agar teks selalu hitam tegas
+                              color: Colors.black87,
                               decoration: item.isSelesai
                                   ? TextDecoration.lineThrough
                                   : TextDecoration.none,
                             ),
                           ),
+
                           subtitle: item.deadline != null
                               ? Text(
                                   'Tenggat: ${item.deadline!.day}/${item.deadline!.month}/${item.deadline!.year}',
+                                  // Tambahkan baris style ini
+                                  style: const TextStyle(color: Colors.black54),
                                 )
                               : null,
+
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
