@@ -41,13 +41,19 @@ class MyApp extends StatelessWidget {
             useMaterial3: true,
           ),
           // --- PENGATURAN TEMA GELAP ---
+          // --- PENGATURAN TEMA GELAP ---
           darkTheme: ThemeData(
             colorScheme: ColorScheme.fromSeed(
               seedColor: Colors.deepPurple,
               brightness: Brightness.dark,
+              // Mengubah warna permukaan standar (seperti dialog)
+              surface: const Color.fromARGB(255, 33, 40, 48),
             ),
+            // Mengubah warna latar belakang utama aplikasi (Scaffold)
+            scaffoldBackgroundColor: const Color.fromARGB(255, 33, 40, 48),
             useMaterial3: true,
           ),
+
           // --- TEMA SAAT INI (mengikuti sakelar) ---
           themeMode: currentMode,
 
