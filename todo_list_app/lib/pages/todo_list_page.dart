@@ -361,6 +361,23 @@ class _TodoListPageState extends State<TodoListPage> {
     );
   }
 
+  // Fungsi untuk membersihkan tugas yang sudah selesai
+  void _bersihkanTugasSelesai() {
+    setState(() {
+      // removeWhere akan mencari dan menghapus semua item yang isSelesai == true
+      todoList.removeWhere((item) => item.isSelesai);
+      _simpanData();
+    });
+  }
+
+  // Fungsi untuk menghapus seluruh data
+  void _hapusSemuaData() {
+    setState(() {
+      todoList.clear(); // Hapus semuanya tanpa sisa
+      _simpanData();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     // Ambil data yang sudah disaring dari fungsi cerdas kita
@@ -372,14 +389,20 @@ class _TodoListPageState extends State<TodoListPage> {
         title: const Text('My Todo List'),
         actions: [
           // Tombol Ikon Roda Gigi
+          // Tombol Ikon Roda Gigi
           IconButton(
             icon: const Icon(Icons.settings),
             tooltip: 'Pengaturan',
             onPressed: () {
-              // Pindah ke halaman Pengaturan
+              // Pindah ke halaman Pengaturan sambil membawa "kabel penghubung" fungsi
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const SettingsPage()),
+                MaterialPageRoute(
+                  builder: (context) => SettingsPage(
+                    onBersihkanSelesai: _bersihkanTugasSelesai,
+                    onHapusSemua: _hapusSemuaData,
+                  ),
+                ),
               );
             },
           ),
