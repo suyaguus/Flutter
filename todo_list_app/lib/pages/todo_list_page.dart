@@ -1,59 +1,382 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/todo.dart'; // Import class Todo dari folder models
+import '../models/todo.dart';
 import 'settings_page.dart';
+import '../main.dart'; // Impor untuk mengambil fungsi tr()
 
-// membuat statefulwidget
 class TodoListPage extends StatefulWidget {
   const TodoListPage({super.key});
+
   @override
   State<TodoListPage> createState() => _TodoListPageState();
 }
 
 class _TodoListPageState extends State<TodoListPage> {
-  // (Potongan kode di bawah ini sengaja disingkat agar Anda tinggal copy-paste/cut dari file lama)
   List<Todo> todoList = [];
   final TextEditingController _taskController = TextEditingController();
 
-  // untuk filter dan shorting
-  String filterPrioritas =
-      'Semua'; // Opsi: Semua, Penting, Mendesak, Tidak Mendesak
+  // --- STATE UNTUK FILTER, SORTING, & SEARCH ---
+  String filterPrioritas = 'Semua';
   bool sortDeadlineTerdekat = false;
-
-  // Tambahan State Pencarian
   String searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
-  // Fungsi "Penyaring Cerdas" yang menggabungkan Filter & Sorting
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? todoString = prefs.getString('todoList');
+    if (todoString != null) {
+      final List<dynamic> decoded = jsonDecode(todoString);
+      setState(() {
+        todoList = decoded
+            .map((item) => Todo.fromMap(item))
+            .toList(); // INI BENAR
+      });
+    }
+  }
+
+  Future<void> _simpanData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String encoded = jsonEncode(
+      todoList.map((item) => item.toMap()).toList(), // INI BENAR
+    );
+
+    await prefs.setString('todoList', encoded);
+  }
+
+  // Fungsi khusus untuk menerjemahkan teks Dropdown Prioritas
+  String translatePriority(String priority) {
+    if (priority == 'Semua') return tr('Semua', 'All');
+    if (priority == 'Penting') return tr('Penting', 'Important');
+    if (priority == 'Mendesak') return tr('Mendesak', 'Urgent');
+    if (priority == 'Tidak Mendesak') return tr('Tidak Mendesak', 'Not Urgent');
+    return priority;
+  }
+
+  void _tambahList() {
+    String prioritasDipilih = "Tidak Mendesak";
+    DateTime? tanggalDipilih;
+    bool isError = false;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: Text(tr('Tambah Tugas Baru', 'Add New Task')),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: _taskController,
+                    decoration: InputDecoration(
+                      hintText: tr('Nama Tugas', 'Task Name'),
+                      errorText: isError
+                          ? tr(
+                              'Nama tugas tidak boleh kosong!',
+                              'Task name cannot be empty!',
+                            )
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: prioritasDipilih,
+                    decoration: InputDecoration(
+                      labelText: tr('Prioritas', 'Priority'),
+                    ),
+                    items: ['Penting', 'Mendesak', 'Tidak Mendesak'].map((
+                      String val,
+                    ) {
+                      return DropdownMenuItem(
+                        value: val,
+                        child: Text(translatePriority(val)),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      setStateDialog(() {
+                        prioritasDipilih = val!;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextButton.icon(
+                    icon: const Icon(Icons.calendar_today),
+                    label: Text(
+                      tanggalDipilih == null
+                          ? tr(
+                              'Tenggat Waktu: Belum diatur',
+                              'Deadline: Not set',
+                            )
+                          : '${tr('Tenggat:', 'Deadline:')} ${tanggalDipilih!.day}/${tanggalDipilih!.month}/${tanggalDipilih!.year}',
+                    ),
+                    onPressed: () async {
+                      DateTime? picked = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now(),
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime(2100),
+                      );
+                      if (picked != null) {
+                        setStateDialog(() {
+                          tanggalDipilih = picked;
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    _taskController.clear();
+                    Navigator.of(context).pop();
+                  },
+                  child: Text(tr('Batal', 'Cancel')),
+                ),
+                TextButton(
+                  onPressed: () {
+                    if (_taskController.text.trim().isEmpty) {
+                      setStateDialog(() {
+                        isError = true;
+                      });
+                    } else {
+                      setState(() {
+                        todoList.add(
+                          Todo(
+                            judul: _taskController.text,
+                            prioritas: prioritasDipilih,
+                            deadline: tanggalDipilih,
+                          ),
+                        );
+                        _simpanData();
+                      });
+                      _taskController.clear();
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            tr(
+                              'Tugas berhasil ditambahkan!',
+                              'Task successfully added!',
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  child: Text(tr('Tambah', 'Add')),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _editList(int index) {
+    _taskController.text = todoList[index].judul;
+    String prioritasDipilih = todoList[index].prioritas;
+    DateTime? tanggalDipilih = todoList[index].deadline;
+    bool isError = false;
+
+    if (!['Penting', 'Mendesak', 'Tidak Mendesak'].contains(prioritasDipilih)) {
+      prioritasDipilih = 'Tidak Mendesak';
+    }
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: Text(tr('Edit Tugas', 'Edit Task')),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: _taskController,
+                    decoration: InputDecoration(
+                      hintText: tr('Nama Tugas', 'Task Name'),
+                      errorText: isError
+                          ? tr(
+                              'Nama tugas tidak boleh kosong!',
+                              'Task name cannot be empty!',
+                            )
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: prioritasDipilih,
+                    decoration: InputDecoration(
+                      labelText: tr('Prioritas', 'Priority'),
+                    ),
+                    items: ['Penting', 'Mendesak', 'Tidak Mendesak'].map((
+                      String val,
+                    ) {
+                      return DropdownMenuItem(
+                        value: val,
+                        child: Text(translatePriority(val)),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      setStateDialog(() {
+                        prioritasDipilih = val!;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextButton.icon(
+                    icon: const Icon(Icons.calendar_today),
+                    label: Text(
+                      tanggalDipilih == null
+                          ? tr(
+                              'Tenggat Waktu: Belum diatur',
+                              'Deadline: Not set',
+                            )
+                          : '${tr('Tenggat:', 'Deadline:')} ${tanggalDipilih!.day}/${tanggalDipilih!.month}/${tanggalDipilih!.year}',
+                    ),
+                    onPressed: () async {
+                      DateTime? picked = await showDatePicker(
+                        context: context,
+                        initialDate: tanggalDipilih ?? DateTime.now(),
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (picked != null) {
+                        setStateDialog(() {
+                          tanggalDipilih = picked;
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    _taskController.clear();
+                    Navigator.of(context).pop();
+                  },
+                  child: Text(tr('Batal', 'Cancel')),
+                ),
+                TextButton(
+                  onPressed: () {
+                    if (_taskController.text.trim().isEmpty) {
+                      setStateDialog(() {
+                        isError = true;
+                      });
+                    } else {
+                      setState(() {
+                        todoList[index].judul = _taskController.text;
+                        todoList[index].prioritas = prioritasDipilih;
+                        todoList[index].deadline = tanggalDipilih;
+                        _simpanData();
+                      });
+                      _taskController.clear();
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  child: Text(tr('Simpan', 'Save')),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _konfirmasiHapus(int index) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(tr('Hapus Tugas?', 'Delete Task?')),
+          content: Text(
+            tr(
+              'Apakah Anda yakin ingin menghapus tugas ini?',
+              'Are you sure you want to delete this task?',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text(tr('Batal', 'Cancel')),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  todoList.removeAt(index);
+                  _simpanData();
+                });
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      tr(
+                        'Tugas berhasil dihapus!',
+                        'Task successfully deleted!',
+                      ),
+                    ),
+                  ),
+                );
+              },
+              child: Text(
+                tr('Hapus', 'Delete'),
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _bersihkanTugasSelesai() {
+    setState(() {
+      todoList.removeWhere((item) => item.isSelesai);
+      _simpanData();
+    });
+  }
+
+  void _hapusSemuaData() {
+    setState(() {
+      todoList.clear();
+      _simpanData();
+    });
+  }
+
   List<Todo> get listYangDitampilkan {
     List<Todo> hasil = todoList.where((todo) {
-      // 1. Lulus Filter Prioritas
       bool cocokPrioritas =
           (filterPrioritas == 'Semua') || (todo.prioritas == filterPrioritas);
-
-      // 2. Lulus Filter Pencarian (Judul atau Tanggal)
       bool cocokSearch = true;
       if (searchQuery.isNotEmpty) {
         String teksCari = searchQuery.toLowerCase();
-
-        // Cek apakah judul cocok
         bool judulCocok = todo.judul.toLowerCase().contains(teksCari);
-
-        // Cek apakah format tanggal cocok (misal: "12/8" atau "2026")
         bool tanggalCocok = false;
         if (todo.deadline != null) {
           String tanggalString =
               '${todo.deadline!.day}/${todo.deadline!.month}/${todo.deadline!.year}';
           tanggalCocok = tanggalString.contains(teksCari);
         }
-
-        cocokSearch = judulCocok || tanggalCocok; // Lulus jika salah satu cocok
+        cocokSearch = judulCocok || tanggalCocok;
       }
-      // Harus lulus prioritas DAN pencarian
       return cocokPrioritas && cocokSearch;
     }).toList();
-    // 3. Urutkan berdasarkan tanggal terdekat
+
     if (sortDeadlineTerdekat) {
       hasil.sort((a, b) {
         if (a.deadline == null && b.deadline == null) return 0;
@@ -66,336 +389,19 @@ class _TodoListPageState extends State<TodoListPage> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    _muatData();
-  }
-
-  // simpan list
-  Future<void> _simpanData() async {
-    final prefs = await SharedPreferences.getInstance();
-    List<String> listString = todoList
-        .map((todo) => jsonEncode(todo.toMap()))
-        .toList();
-    await prefs.setStringList('data_todo', listString);
-  }
-
-  // baca list
-  Future<void> _muatData() async {
-    final prefs = await SharedPreferences.getInstance();
-    List<String>? listString = prefs.getStringList('data_todo');
-
-    if (listString != null) {
-      setState(() {
-        todoList = listString
-            .map((item) => Todo.fromMap(jsonDecode(item)))
-            .toList();
-      });
-    }
-  }
-
-  // Fungsi tambah list baru
-  void _tambahList() {
-    String prioritasDipilih = "Tidak Mendesak";
-    DateTime? tanggalDipilih;
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          // Memungkinkan popup mengubah tampilannya sendiri
-          builder: (context, setStatePopup) {
-            return AlertDialog(
-              title: const Text('Tambah List Baru'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: _taskController,
-                    decoration: const InputDecoration(
-                      hintText: 'Masukkan List Baru',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  // Dropdown Prioritas
-                  DropdownButtonFormField<String>(
-                    value: prioritasDipilih,
-                    decoration: const InputDecoration(labelText: 'Prioritas'),
-                    items: ['Penting', 'Mendesak', 'Tidak Mendesak'].map((
-                      String val,
-                    ) {
-                      return DropdownMenuItem(value: val, child: Text(val));
-                    }).toList(),
-                    onChanged: (val) {
-                      setStatePopup(() {
-                        prioritasDipilih = val!;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  // Baris Pemilihan Tanggal
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          tanggalDipilih == null
-                              ? 'Belum ada Tenggat'
-                              : 'Tenggat: ${tanggalDipilih!.day}/${tanggalDipilih!.month}/${tanggalDipilih!.year}',
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.calendar_today,
-                          color: Colors.deepPurple,
-                        ),
-                        onPressed: () async {
-                          // Memunculkan kalender bawaan Android/Web
-                          DateTime? tgl = await showDatePicker(
-                            context: context,
-                            initialDate: DateTime.now(),
-                            firstDate: DateTime.now(),
-                            lastDate: DateTime(2030),
-                          );
-                          if (tgl != null) {
-                            setStatePopup(() {
-                              tanggalDipilih = tgl;
-                            });
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    _taskController.clear();
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Batal'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    if (_taskController.text.isNotEmpty) {
-                      setState(() {
-                        // Tambahkan data lengkap ke list
-                        todoList.add(
-                          Todo(
-                            judul: _taskController.text,
-                            prioritas: prioritasDipilih,
-                            deadline: tanggalDipilih,
-                          ),
-                        );
-                        _simpanData();
-                      });
-                      _taskController.clear();
-                      Navigator.of(context).pop();
-                    }
-                  },
-                  child: const Text('Simpan'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // Fungsi edit list
-  void _editList(int index) {
-    _taskController.text = todoList[index].judul;
-    String prioritasDipilih = todoList[index].prioritas;
-    DateTime? tanggalDipilih = todoList[index].deadline;
-
-    // Mencegah error jika membaca data lama di memori
-    if (!['Penting', 'Mendesak', 'Tidak Mendesak'].contains(prioritasDipilih)) {
-      prioritasDipilih = 'Tidak Mendesak'; // Ubah paksa ke nilai default baru
-    }
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setStatePopup) {
-            return AlertDialog(
-              title: const Text('Edit Tugas'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: _taskController,
-                    decoration: const InputDecoration(
-                      hintText: 'Ubah teks tugas:',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  DropdownButtonFormField<String>(
-                    value: prioritasDipilih,
-                    decoration: const InputDecoration(labelText: 'Prioritas'),
-                    items: ['Penting', 'Mendesak', 'Tidak Mendesak'].map((
-                      String val,
-                    ) {
-                      return DropdownMenuItem(value: val, child: Text(val));
-                    }).toList(),
-                    onChanged: (val) {
-                      setStatePopup(() {
-                        prioritasDipilih = val!;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          tanggalDipilih == null
-                              ? 'Belum ada Tenggat'
-                              : 'Tenggat: ${tanggalDipilih!.day}/${tanggalDipilih!.month}/${tanggalDipilih!.year}',
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.calendar_today,
-                          color: Colors.deepPurple,
-                        ),
-                        onPressed: () async {
-                          DateTime? tgl = await showDatePicker(
-                            context: context,
-                            initialDate: tanggalDipilih ?? DateTime.now(),
-                            firstDate: DateTime.now(),
-                            lastDate: DateTime(2030),
-                          );
-                          if (tgl != null) {
-                            setStatePopup(() {
-                              tanggalDipilih = tgl;
-                            });
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    _taskController.clear();
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Batal'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    if (_taskController.text.isNotEmpty) {
-                      setState(() {
-                        // Update semua data pada index tersebut
-                        todoList[index].judul = _taskController.text;
-                        todoList[index].prioritas = prioritasDipilih;
-                        todoList[index].deadline = tanggalDipilih;
-                        _simpanData();
-                      });
-                      _taskController.clear();
-                      Navigator.of(context).pop();
-                    }
-                  },
-                  child: const Text('Simpan'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // konfrimasi hapus
-  // Fungsi untuk memunculkan popup konfirmasi hapus
-  void _konfirmasiHapus(int index) {
-    // Ambil judul untuk ditampilkan di pesan popup
-    String judulYangAkanDihapus = todoList[index].judul;
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Konfirmasi Hapus'),
-          content: Text(
-            'Apakah Anda yakin ingin menghapus "$judulYangAkanDihapus"?',
-          ),
-          actions: [
-            // Tombol Batal
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Tutup dialog tanpa menghapus
-              },
-              child: const Text('Batal'),
-            ),
-            // Tombol Hapus (Berwarna merah agar hati-hati)
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  todoList.removeAt(index); // Eksekusi hapus list
-                  _simpanData(); // Simpan perubahan
-                });
-                Navigator.of(context).pop(); // Tutup dialog
-
-                // Munculkan notifikasi Snackbar
-                ScaffoldMessenger.of(context).clearSnackBars();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'List "$judulYangAkanDihapus" telah dihapus!',
-                    ),
-                    duration: const Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
-              child: const Text('Hapus', style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // Fungsi untuk membersihkan tugas yang sudah selesai
-  void _bersihkanTugasSelesai() {
-    setState(() {
-      // removeWhere akan mencari dan menghapus semua item yang isSelesai == true
-      todoList.removeWhere((item) => item.isSelesai);
-      _simpanData();
-    });
-  }
-
-  // Fungsi untuk menghapus seluruh data
-  void _hapusSemuaData() {
-    setState(() {
-      todoList.clear(); // Hapus semuanya tanpa sisa
-      _simpanData();
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    // Ambil data yang sudah disaring dari fungsi cerdas kita
     List<Todo> daftarTampil = listYangDitampilkan;
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('Daftar Tugas Saya'),
+        title: Text(tr('Daftar Tugas Saya', 'My Todo List')),
         actions: [
-          // Tombol Ikon Roda Gigi
-          // Tombol Ikon Roda Gigi
           IconButton(
             icon: const Icon(Icons.settings),
-            tooltip: 'Pengaturan',
-            onPressed: () {
-              // Pindah ke halaman Pengaturan sambil membawa "kabel penghubung" fungsi
-              Navigator.push(
+            tooltip: tr('Pengaturan', 'Settings'),
+            onPressed: () async {
+              await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => SettingsPage(
@@ -404,25 +410,24 @@ class _TodoListPageState extends State<TodoListPage> {
                   ),
                 ),
               );
+              setState(() {});
             },
           ),
         ],
       ),
-
-      // Kita pakai Column untuk menumpuk Search Bar dan List Tugas
       body: Column(
         children: [
-          // --- 1. BARIS PENCARIAN (Search Bar) ---
-          // --- 1. CONTROL PANEL (Pencarian & Filter) ---
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
-                // Kotak Pencarian
                 TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
-                    hintText: 'Cari tugas atau tanggal (Misal: 12/8)...',
+                    hintText: tr(
+                      'Cari tugas atau tanggal (Misal: 12/8)...',
+                      'Search for a task or date (e.g., 12/8)...',
+                    ),
                     prefixIcon: const Icon(Icons.search),
                     suffixIcon: searchQuery.isNotEmpty
                         ? IconButton(
@@ -446,14 +451,10 @@ class _TodoListPageState extends State<TodoListPage> {
                     });
                   },
                 ),
-
-                const SizedBox(height: 12), // Jarak antara pencarian dan filter
-                // Baris Tombol Filter & Sort
+                const SizedBox(height: 12),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment
-                      .spaceBetween, // Jauhkan ke kiri dan kanan
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Bagian Filter (Kiri)
                     Row(
                       children: [
                         const Icon(
@@ -464,8 +465,7 @@ class _TodoListPageState extends State<TodoListPage> {
                         const SizedBox(width: 8),
                         DropdownButton<String>(
                           value: filterPrioritas,
-                          underline:
-                              const SizedBox(), // Menghilangkan garis bawah bawaan dropdown
+                          underline: const SizedBox(),
                           icon: const Icon(Icons.keyboard_arrow_down, size: 20),
                           items:
                               [
@@ -476,7 +476,7 @@ class _TodoListPageState extends State<TodoListPage> {
                               ].map((String choice) {
                                 return DropdownMenuItem<String>(
                                   value: choice,
-                                  child: Text(choice),
+                                  child: Text(translatePriority(choice)),
                                 );
                               }).toList(),
                           onChanged: (String? value) {
@@ -487,13 +487,26 @@ class _TodoListPageState extends State<TodoListPage> {
                         ),
                       ],
                     ),
-
-                    // Bagian Sorting (Kanan)
                     TextButton.icon(
                       onPressed: () {
                         setState(() {
                           sortDeadlineTerdekat = !sortDeadlineTerdekat;
                         });
+                        ScaffoldMessenger.of(context).clearSnackBars();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              sortDeadlineTerdekat
+                                  ? tr(
+                                      'Mengurutkan tenggat terdekat',
+                                      'Sorting by nearest deadline',
+                                    )
+                                  : tr('Urutan normal', 'Normal order'),
+                            ),
+                            duration: const Duration(seconds: 1),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
                       },
                       icon: Icon(
                         sortDeadlineTerdekat
@@ -503,7 +516,7 @@ class _TodoListPageState extends State<TodoListPage> {
                         size: 20,
                       ),
                       label: Text(
-                        'Urutkan Tenggat',
+                        tr('Urutkan Tenggat', 'Sort Deadlines'),
                         style: TextStyle(
                           color: sortDeadlineTerdekat
                               ? Colors.red
@@ -519,24 +532,24 @@ class _TodoListPageState extends State<TodoListPage> {
               ],
             ),
           ),
-
-          // --- 2. AREA DAFTAR TUGAS ---
-          // Menggunakan Expanded agar list mengambil sisa ruang layar secara penuh
           Expanded(
             child: daftarTampil.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(
+                      children: [
+                        const Icon(
                           Icons.assignment_turned_in,
                           size: 80,
                           color: Colors.grey,
                         ),
-                        SizedBox(height: 16),
+                        const SizedBox(height: 16),
                         Text(
-                          'Tidak ada catatan di sini!',
-                          style: TextStyle(fontSize: 18, color: Colors.grey),
+                          tr('Tidak ada catatan di sini!', 'No notes here!'),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            color: Colors.grey,
+                          ),
                         ),
                       ],
                     ),
@@ -549,10 +562,10 @@ class _TodoListPageState extends State<TodoListPage> {
 
                       return Card(
                         color: item.prioritas == 'Penting'
-                            ? Colors.red.shade50
+                            ? Colors.red.withOpacity(0.2)
                             : (item.prioritas == 'Mendesak'
-                                  ? Colors.orange.shade50
-                                  : Colors.green.shade50),
+                                  ? Colors.orange.withOpacity(0.2)
+                                  : Colors.green.withOpacity(0.2)),
                         margin: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 8,
@@ -564,7 +577,6 @@ class _TodoListPageState extends State<TodoListPage> {
                         child: ListTile(
                           leading: Checkbox(
                             value: item.isSelesai,
-                            // Tambahkan baris ini agar pinggiran kotak selalu berwarna gelap
                             side: const BorderSide(
                               color: Colors.black54,
                               width: 2,
@@ -576,26 +588,21 @@ class _TodoListPageState extends State<TodoListPage> {
                               });
                             },
                           ),
-
                           title: Text(
                             item.judul,
                             style: TextStyle(
-                              // Tambahkan baris ini agar teks selalu hitam tegas
                               color: Colors.black87,
                               decoration: item.isSelesai
                                   ? TextDecoration.lineThrough
                                   : TextDecoration.none,
                             ),
                           ),
-
                           subtitle: item.deadline != null
                               ? Text(
-                                  'Tenggat: ${item.deadline!.day}/${item.deadline!.month}/${item.deadline!.year}',
-                                  // Tambahkan baris style ini
+                                  '${tr('Tenggat:', 'Deadline:')} ${item.deadline!.day}/${item.deadline!.month}/${item.deadline!.year}',
                                   style: const TextStyle(color: Colors.black54),
                                 )
                               : null,
-
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -623,13 +630,12 @@ class _TodoListPageState extends State<TodoListPage> {
                       );
                     },
                   ),
-          ), // Akhir Expanded
+          ),
         ],
-      ), // Akhir Column
-
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _tambahList,
-        tooltip: 'Tambah List',
+        tooltip: tr('Tambah Tugas', 'Add Task'),
         child: const Icon(Icons.add),
       ),
     );

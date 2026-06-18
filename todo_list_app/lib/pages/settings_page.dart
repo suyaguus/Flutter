@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../main.dart'; // Untuk memanggil themeNotifier
+import '../main.dart'; // Untuk memanggil themeNotifier dan tr()
 
 class SettingsPage extends StatefulWidget {
-  // Menerima kabel penghubung dari halaman utama
   final VoidCallback onBersihkanSelesai;
   final VoidCallback onHapusSemua;
 
@@ -22,25 +21,30 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pengaturan'),
+        title: Text(tr('Pengaturan', 'Settings')),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: ListView(
         children: [
           // --- BAGIAN TAMPILAN ---
-          const Padding(
-            padding: EdgeInsets.all(16.0),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
             child: Text(
-              'Tampilan',
-              style: TextStyle(
+              tr('Tampilan', 'Appearance'),
+              style: const TextStyle(
                 color: Colors.deepPurple,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
           SwitchListTile(
-            title: const Text('Mode Gelap (Dark Mode)'),
-            subtitle: const Text('Ubah tema aplikasi menjadi gelap'),
+            title: Text(tr('Mode Gelap (Dark Mode)', 'Dark Mode')),
+            subtitle: Text(
+              tr(
+                'Ubah tema aplikasi menjadi gelap',
+                'Change app theme to dark',
+              ),
+            ),
             value: themeNotifier.value == ThemeMode.dark,
             secondary: const Icon(Icons.dark_mode),
             onChanged: (bool value) async {
@@ -51,14 +55,38 @@ class _SettingsPageState extends State<SettingsPage> {
               await prefs.setBool('isDarkMode', value);
             },
           ),
+
+          // Menu Pilihan Bahasa
+          ListTile(
+            leading: const Icon(Icons.language),
+            title: Text(tr('Bahasa Aplikasi', 'App Language')),
+            subtitle: Text(tr('Indonesia', 'English')),
+            trailing: DropdownButton<String>(
+              value: languageNotifier.value,
+              underline: const SizedBox(),
+              items: const [
+                DropdownMenuItem(value: 'id', child: Text('🇮🇩 Indonesia')),
+                DropdownMenuItem(value: 'en', child: Text('🇬🇧 English')),
+              ],
+              onChanged: (String? value) async {
+                if (value != null) {
+                  setState(() {
+                    languageNotifier.value = value;
+                  });
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setString('language', value);
+                }
+              },
+            ),
+          ),
           const Divider(),
 
           // --- BAGIAN MANAJEMEN DATA ---
-          const Padding(
-            padding: EdgeInsets.all(16.0),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
             child: Text(
-              'Manajemen Data',
-              style: TextStyle(
+              tr('Manajemen Data', 'Data Management'),
+              style: const TextStyle(
                 color: Colors.deepPurple,
                 fontWeight: FontWeight.bold,
               ),
@@ -68,36 +96,49 @@ class _SettingsPageState extends State<SettingsPage> {
           // Tombol Bersihkan Selesai
           ListTile(
             leading: const Icon(Icons.delete_sweep, color: Colors.orange),
-            title: const Text('Bersihkan Tugas Selesai'),
-            subtitle: const Text('Hapus semua tugas yang sudah dicentang'),
+            title: Text(tr('Bersihkan Tugas Selesai', 'Clear Completed Tasks')),
+            subtitle: Text(
+              tr(
+                'Hapus semua tugas yang sudah dicentang',
+                'Delete all checked tasks',
+              ),
+            ),
             onTap: () {
-              // Munculkan Popup Konfirmasi
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: const Text('Bersihkan Tugas Selesai?'),
-                  content: const Text(
-                    'Semua tugas yang sudah dicentang akan dihapus selamanya.',
+                  title: Text(
+                    tr('Bersihkan Tugas Selesai?', 'Clear Completed Tasks?'),
+                  ),
+                  content: Text(
+                    tr(
+                      'Semua tugas yang sudah dicentang akan dihapus selamanya.',
+                      'All checked tasks will be permanently deleted.',
+                    ),
                   ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Batal'),
+                      child: Text(tr('Batal', 'Cancel')),
                     ),
                     TextButton(
                       onPressed: () {
-                        widget
-                            .onBersihkanSelesai(); // Panggil fungsi dari halaman utama
-                        Navigator.pop(context); // Tutup dialog
+                        widget.onBersihkanSelesai();
+                        Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Tugas selesai telah dibersihkan!'),
+                          SnackBar(
+                            content: Text(
+                              tr(
+                                'Tugas selesai telah dibersihkan!',
+                                'Completed tasks have been cleared!',
+                              ),
+                            ),
                           ),
                         );
                       },
-                      child: const Text(
-                        'Bersihkan',
-                        style: TextStyle(color: Colors.orange),
+                      child: Text(
+                        tr('Bersihkan', 'Clear'),
+                        style: const TextStyle(color: Colors.orange),
                       ),
                     ),
                   ],
@@ -109,41 +150,50 @@ class _SettingsPageState extends State<SettingsPage> {
           // Tombol Hapus Semua
           ListTile(
             leading: const Icon(Icons.delete_forever, color: Colors.red),
-            title: const Text(
-              'Hapus Semua Data',
-              style: TextStyle(color: Colors.red),
+            title: Text(
+              tr('Hapus Semua Data', 'Clear All Data'),
+              style: const TextStyle(color: Colors.red),
             ),
-            subtitle: const Text(
-              'Kosongkan seluruh daftar tugas secara permanen',
+            subtitle: Text(
+              tr(
+                'Kosongkan seluruh daftar tugas secara permanen',
+                'Empty the entire task list permanently',
+              ),
             ),
             onTap: () {
-              // Munculkan Popup Konfirmasi Bahaya
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: const Text('Peringatan Bahaya!'),
-                  content: const Text(
-                    'Apakah Anda yakin ingin menghapus SELURUH daftar tugas? Tindakan ini tidak bisa dibatalkan.',
+                  title: Text(tr('Peringatan Bahaya!', 'Danger Warning!')),
+                  content: Text(
+                    tr(
+                      'Apakah Anda yakin ingin menghapus SELURUH daftar tugas? Tindakan ini tidak bisa dibatalkan.',
+                      'Are you sure you want to delete the ENTIRE task list? This action cannot be undone.',
+                    ),
                   ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Batal'),
+                      child: Text(tr('Batal', 'Cancel')),
                     ),
                     TextButton(
                       onPressed: () {
-                        widget
-                            .onHapusSemua(); // Panggil fungsi dari halaman utama
-                        Navigator.pop(context); // Tutup dialog
+                        widget.onHapusSemua();
+                        Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Seluruh data telah dihapus!'),
+                          SnackBar(
+                            content: Text(
+                              tr(
+                                'Seluruh data telah dihapus!',
+                                'All data has been deleted!',
+                              ),
+                            ),
                           ),
                         );
                       },
-                      child: const Text(
-                        'Hapus Semua',
-                        style: TextStyle(
+                      child: Text(
+                        tr('Hapus Semua', 'Delete All'),
+                        style: const TextStyle(
                           color: Colors.red,
                           fontWeight: FontWeight.bold,
                         ),
@@ -157,20 +207,25 @@ class _SettingsPageState extends State<SettingsPage> {
           const Divider(),
 
           // --- BAGIAN INFO ---
-          const Padding(
-            padding: EdgeInsets.all(16.0),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
             child: Text(
-              'Info Aplikasi',
-              style: TextStyle(
+              tr('Info Aplikasi', 'App Info'),
+              style: const TextStyle(
                 color: Colors.deepPurple,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
-          const ListTile(
-            leading: Icon(Icons.info_outline),
-            title: Text('My Todo List v1.0.0'),
-            subtitle: Text('Dikembangkan oleh Surya Agung Firdaus'),
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text('My Todo List v1.0.0'),
+            subtitle: Text(
+              tr(
+                'Dikembangkan oleh Surya Agung Firdaus',
+                'Developed by Surya Agung Firdaus',
+              ),
+            ),
           ),
         ],
       ),
