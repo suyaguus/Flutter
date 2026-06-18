@@ -338,12 +338,63 @@ class _TodoListPageState extends State<TodoListPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Ambil data yang sudah disaring dari fungsi cerdas kita
+    List<Todo> daftarTampil = listYangDitampilkan;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('My Todo List'),
+        actions: [
+          // 1. Icon Filter Prioritas (Munculkan Menu Dropdown)
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.filter_list),
+            tooltip: 'Filter Prioritas',
+            onSelected: (String value) {
+              setState(() {
+                filterPrioritas = value;
+              }); // Ubah state filter
+            },
+            itemBuilder: (BuildContext context) {
+              return ['Semua', 'Penting', 'Mendesak', 'Tidak Mendesak'].map((
+                String choice,
+              ) {
+                return PopupMenuItem<String>(
+                  value: choice,
+                  child: Text(choice == filterPrioritas ? '✓ $choice' : choice),
+                );
+              }).toList();
+            },
+          ),
+          // 2. Icon Urutkan Tanggal Terdekat
+          IconButton(
+            icon: Icon(
+              sortDeadlineTerdekat ? Icons.schedule : Icons.schedule_outlined,
+              color: sortDeadlineTerdekat ? Colors.red : null,
+            ),
+            tooltip: 'Urutkan Tenggat Terdekat',
+            onPressed: () {
+              setState(() {
+                sortDeadlineTerdekat = !sortDeadlineTerdekat;
+              });
+              ScaffoldMessenger.of(context).clearSnackBars();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    sortDeadlineTerdekat
+                        ? 'Mengurutkan tenggat terdekat'
+                        : 'Urutan normal',
+                  ),
+                  duration: const Duration(seconds: 1),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+          ),
+        ],
       ),
-      body: todoList.isEmpty
+
+      body: daftarTampil.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -355,19 +406,25 @@ class _TodoListPageState extends State<TodoListPage> {
                   ),
                   SizedBox(height: 16),
                   Text(
-                    'Semua Tugas Sudah Selesai!',
+                    'Tidak ada catatan di sini!',
                     style: TextStyle(fontSize: 18, color: Colors.grey),
                   ),
                 ],
               ),
             )
           : ListView.builder(
-              itemCount: todoList.length,
+              itemCount: daftarTampil.length,
               itemBuilder: (context, index) {
+                // Ambil objek item yang sudah di-filter
+                Todo item = daftarTampil[index];
+
+                // PENTING: Cari di mana urutan aslinya di memori utama (todoList)
+                int realIndex = todoList.indexOf(item);
+
                 return Card(
-                  color: todoList[index].prioritas == 'Penting'
+                  color: item.prioritas == 'Penting'
                       ? Colors.red.shade50
-                      : (todoList[index].prioritas == 'Mendesak'
+                      : (item.prioritas == 'Mendesak'
                             ? Colors.orange.shade50
                             : Colors.green.shade50),
                   margin: const EdgeInsets.symmetric(
@@ -380,50 +437,42 @@ class _TodoListPageState extends State<TodoListPage> {
                   ),
                   child: ListTile(
                     leading: Checkbox(
-                      value: todoList[index].isSelesai,
+                      value: item.isSelesai,
                       onChanged: (bool? nilaiBaru) {
                         setState(() {
-                          todoList[index].isSelesai = nilaiBaru!;
+                          todoList[realIndex].isSelesai =
+                              nilaiBaru!; // Edit file aslinya
                           _simpanData();
                         });
                       },
                     ),
                     title: Text(
-                      todoList[index].judul,
+                      item.judul,
                       style: TextStyle(
-                        decoration: todoList[index].isSelesai
+                        decoration: item.isSelesai
                             ? TextDecoration.lineThrough
                             : TextDecoration.none,
                       ),
                     ),
-                    subtitle: todoList[index].deadline != null
+                    subtitle: item.deadline != null
                         ? Text(
-                            'Tenggat: ${todoList[index].deadline!.day}/${todoList[index].deadline!.month}/${todoList[index].deadline!.year}',
+                            'Tenggat: ${item.deadline!.day}/${item.deadline!.month}/${item.deadline!.year}',
                           )
                         : null,
-                    // Membungkus tombol Edit & Delete dalam satu baris (Row)
                     trailing: Row(
-                      mainAxisSize: MainAxisSize
-                          .min, // Agar Row hanya memakan tempat sebesar tombol saja
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Tombol Edit (Pensil Biru)
                         IconButton(
                           icon: const Icon(Icons.edit, color: Colors.blue),
                           onPressed: () {
-                            _editList(
-                              index,
-                            ); // Panggil fungsi edit dengan index saat ini
-                          },
+                            _editList(realIndex);
+                          }, // Kirim index aslinya
                         ),
-
-                        // Tombol Delete (Sampah Merah)
                         IconButton(
                           icon: const Icon(Icons.delete, color: Colors.red),
                           onPressed: () {
-                            _konfirmasiHapus(
-                              index,
-                            ); // Panggil fungsi konfirmasi hapus
-                          },
+                            _konfirmasiHapus(realIndex);
+                          }, // Kirim index aslinya
                         ),
                       ],
                     ),
@@ -431,6 +480,7 @@ class _TodoListPageState extends State<TodoListPage> {
                 );
               },
             ),
+
       floatingActionButton: FloatingActionButton(
         onPressed: _tambahList,
         tooltip: 'Tambah List',
