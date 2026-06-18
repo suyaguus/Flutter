@@ -418,92 +418,136 @@ class _TodoListPageState extends State<TodoListPage> {
         ],
       ),
 
-      body: daftarTampil.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(
-                    Icons.assignment_turned_in,
-                    size: 80,
-                    color: Colors.grey,
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'Tidak ada catatan di sini!',
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
-                  ),
-                ],
+      // Kita pakai Column untuk menumpuk Search Bar dan List Tugas
+      body: Column(
+        children: [
+          // --- 1. BARIS PENCARIAN (Search Bar) ---
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Cari tugas atau tanggal (Misal: 12/8)...',
+                prefixIcon: const Icon(Icons.search),
+                // Tampilkan ikon silang (X) hanya jika ada teks yang diketik
+                suffixIcon: searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear(); // Bersihkan teks
+                          setState(() {
+                            searchQuery = '';
+                          }); // Reset state
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30.0), // Ujung membulat
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
               ),
-            )
-          : ListView.builder(
-              itemCount: daftarTampil.length,
-              itemBuilder: (context, index) {
-                // Ambil objek item yang sudah di-filter
-                Todo item = daftarTampil[index];
+              onChanged: (value) {
+                setState(() {
+                  searchQuery = value;
+                }); // Filter otomatis saat mengetik
+              },
+            ),
+          ),
 
-                // PENTING: Cari di mana urutan aslinya di memori utama (todoList)
-                int realIndex = todoList.indexOf(item);
-
-                return Card(
-                  color: item.prioritas == 'Penting'
-                      ? Colors.red.shade50
-                      : (item.prioritas == 'Mendesak'
-                            ? Colors.orange.shade50
-                            : Colors.green.shade50),
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ListTile(
-                    leading: Checkbox(
-                      value: item.isSelesai,
-                      onChanged: (bool? nilaiBaru) {
-                        setState(() {
-                          todoList[realIndex].isSelesai =
-                              nilaiBaru!; // Edit file aslinya
-                          _simpanData();
-                        });
-                      },
-                    ),
-                    title: Text(
-                      item.judul,
-                      style: TextStyle(
-                        decoration: item.isSelesai
-                            ? TextDecoration.lineThrough
-                            : TextDecoration.none,
-                      ),
-                    ),
-                    subtitle: item.deadline != null
-                        ? Text(
-                            'Tenggat: ${item.deadline!.day}/${item.deadline!.month}/${item.deadline!.year}',
-                          )
-                        : null,
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.blue),
-                          onPressed: () {
-                            _editList(realIndex);
-                          }, // Kirim index aslinya
+          // --- 2. AREA DAFTAR TUGAS ---
+          // Menggunakan Expanded agar list mengambil sisa ruang layar secara penuh
+          Expanded(
+            child: daftarTampil.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(
+                          Icons.assignment_turned_in,
+                          size: 80,
+                          color: Colors.grey,
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () {
-                            _konfirmasiHapus(realIndex);
-                          }, // Kirim index aslinya
+                        SizedBox(height: 16),
+                        Text(
+                          'Tidak ada catatan di sini!',
+                          style: TextStyle(fontSize: 18, color: Colors.grey),
                         ),
                       ],
                     ),
+                  )
+                : ListView.builder(
+                    itemCount: daftarTampil.length,
+                    itemBuilder: (context, index) {
+                      Todo item = daftarTampil[index];
+                      int realIndex = todoList.indexOf(item);
+
+                      return Card(
+                        color: item.prioritas == 'Penting'
+                            ? Colors.red.shade50
+                            : (item.prioritas == 'Mendesak'
+                                  ? Colors.orange.shade50
+                                  : Colors.green.shade50),
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: ListTile(
+                          leading: Checkbox(
+                            value: item.isSelesai,
+                            onChanged: (bool? nilaiBaru) {
+                              setState(() {
+                                todoList[realIndex].isSelesai = nilaiBaru!;
+                                _simpanData();
+                              });
+                            },
+                          ),
+                          title: Text(
+                            item.judul,
+                            style: TextStyle(
+                              decoration: item.isSelesai
+                                  ? TextDecoration.lineThrough
+                                  : TextDecoration.none,
+                            ),
+                          ),
+                          subtitle: item.deadline != null
+                              ? Text(
+                                  'Tenggat: ${item.deadline!.day}/${item.deadline!.month}/${item.deadline!.year}',
+                                )
+                              : null,
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.edit,
+                                  color: Colors.blue,
+                                ),
+                                onPressed: () {
+                                  _editList(realIndex);
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () {
+                                  _konfirmasiHapus(realIndex);
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
+          ), // Akhir Expanded
+        ],
+      ), // Akhir Column
 
       floatingActionButton: FloatingActionButton(
         onPressed: _tambahList,
