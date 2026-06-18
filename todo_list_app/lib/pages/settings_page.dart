@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../main.dart'; // Untuk memanggil themeNotifier
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -35,15 +37,21 @@ class _SettingsPageState extends State<SettingsPage> {
           SwitchListTile(
             title: const Text('Mode Gelap (Dark Mode)'),
             subtitle: const Text('Ubah tema aplikasi menjadi gelap'),
-            value: isDarkMode,
+            // Cek apakah tema pusat saat ini adalah mode gelap
+            value: themeNotifier.value == ThemeMode.dark,
             secondary: const Icon(Icons.dark_mode),
-            onChanged: (bool value) {
+            onChanged: (bool value) async {
+              // 1. Ubah tampilan secara langsung secara instan
               setState(() {
-                isDarkMode = value;
+                themeNotifier.value = value ? ThemeMode.dark : ThemeMode.light;
               });
-              // (Nanti kita akan tambahkan kode untuk mengubah tema asli di sini)
+
+              // 2. Simpan pilihan ke memori (SharedPreferences)
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('isDarkMode', value);
             },
           ),
+
           const Divider(), // Garis pemisah
           // --- BAGIAN MANAJEMEN DATA ---
           const Padding(
