@@ -369,88 +369,116 @@ class _TodoListPageState extends State<TodoListPage> {
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('My Todo List'),
-        actions: [
-          // 1. Icon Filter Prioritas (Munculkan Menu Dropdown)
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.filter_list),
-            tooltip: 'Filter Prioritas',
-            onSelected: (String value) {
-              setState(() {
-                filterPrioritas = value;
-              }); // Ubah state filter
-            },
-            itemBuilder: (BuildContext context) {
-              return ['Semua', 'Penting', 'Mendesak', 'Tidak Mendesak'].map((
-                String choice,
-              ) {
-                return PopupMenuItem<String>(
-                  value: choice,
-                  child: Text(choice == filterPrioritas ? '✓ $choice' : choice),
-                );
-              }).toList();
-            },
-          ),
-          // 2. Icon Urutkan Tanggal Terdekat
-          IconButton(
-            icon: Icon(
-              sortDeadlineTerdekat ? Icons.schedule : Icons.schedule_outlined,
-              color: sortDeadlineTerdekat ? Colors.red : null,
-            ),
-            tooltip: 'Urutkan Tenggat Terdekat',
-            onPressed: () {
-              setState(() {
-                sortDeadlineTerdekat = !sortDeadlineTerdekat;
-              });
-              ScaffoldMessenger.of(context).clearSnackBars();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    sortDeadlineTerdekat
-                        ? 'Mengurutkan tenggat terdekat'
-                        : 'Urutan normal',
-                  ),
-                  duration: const Duration(seconds: 1),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-          ),
-        ],
       ),
 
       // Kita pakai Column untuk menumpuk Search Bar dan List Tugas
       body: Column(
         children: [
           // --- 1. BARIS PENCARIAN (Search Bar) ---
+          // --- 1. CONTROL PANEL (Pencarian & Filter) ---
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Cari tugas atau tanggal (Misal: 12/8)...',
-                prefixIcon: const Icon(Icons.search),
-                // Tampilkan ikon silang (X) hanya jika ada teks yang diketik
-                suffixIcon: searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear(); // Bersihkan teks
-                          setState(() {
-                            searchQuery = '';
-                          }); // Reset state
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30.0), // Ujung membulat
+            child: Column(
+              children: [
+                // Kotak Pencarian
+                TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Cari tugas atau tanggal (Misal: 12/8)...',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {
+                                searchQuery = '';
+                              });
+                            },
+                          )
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30.0),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      searchQuery = value;
+                    });
+                  },
                 ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-              ),
-              onChanged: (value) {
-                setState(() {
-                  searchQuery = value;
-                }); // Filter otomatis saat mengetik
-              },
+
+                const SizedBox(height: 12), // Jarak antara pencarian dan filter
+                // Baris Tombol Filter & Sort
+                Row(
+                  mainAxisAlignment: MainAxisAlignment
+                      .spaceBetween, // Jauhkan ke kiri dan kanan
+                  children: [
+                    // Bagian Filter (Kiri)
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.filter_list,
+                          color: Colors.grey,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        DropdownButton<String>(
+                          value: filterPrioritas,
+                          underline:
+                              const SizedBox(), // Menghilangkan garis bawah bawaan dropdown
+                          icon: const Icon(Icons.keyboard_arrow_down, size: 20),
+                          items:
+                              [
+                                'Semua',
+                                'Penting',
+                                'Mendesak',
+                                'Tidak Mendesak',
+                              ].map((String choice) {
+                                return DropdownMenuItem<String>(
+                                  value: choice,
+                                  child: Text(choice),
+                                );
+                              }).toList(),
+                          onChanged: (String? value) {
+                            setState(() {
+                              filterPrioritas = value!;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+
+                    // Bagian Sorting (Kanan)
+                    TextButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          sortDeadlineTerdekat = !sortDeadlineTerdekat;
+                        });
+                      },
+                      icon: Icon(
+                        sortDeadlineTerdekat
+                            ? Icons.schedule
+                            : Icons.schedule_outlined,
+                        color: sortDeadlineTerdekat ? Colors.red : Colors.grey,
+                        size: 20,
+                      ),
+                      label: Text(
+                        'Urutkan Tenggat',
+                        style: TextStyle(
+                          color: sortDeadlineTerdekat
+                              ? Colors.red
+                              : Colors.grey,
+                          fontWeight: sortDeadlineTerdekat
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
 
