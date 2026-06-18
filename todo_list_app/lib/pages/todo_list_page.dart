@@ -395,7 +395,7 @@ class _TodoListPageState extends State<TodoListPage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(tr('Daftar Tugas Saya', 'My Todo List')),
+        title: Text('My Todo List'),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
