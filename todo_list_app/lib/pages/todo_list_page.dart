@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/todo.dart'; // Import class Todo dari folder models
+import 'settings_page.dart';
 
 // membuat statefulwidget
 class TodoListPage extends StatefulWidget {
@@ -369,6 +370,20 @@ class _TodoListPageState extends State<TodoListPage> {
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('My Todo List'),
+        actions: [
+          // Tombol Ikon Roda Gigi
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Pengaturan',
+            onPressed: () {
+              // Pindah ke halaman Pengaturan
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsPage()),
+              );
+            },
+          ),
+        ],
       ),
 
       // Kita pakai Column untuk menumpuk Search Bar dan List Tugas
