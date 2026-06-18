@@ -20,19 +20,43 @@ class _TodoListPageState extends State<TodoListPage> {
       'Semua'; // Opsi: Semua, Penting, Mendesak, Tidak Mendesak
   bool sortDeadlineTerdekat = false;
 
+  // Tambahan State Pencarian
+  String searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+
   // Fungsi "Penyaring Cerdas" yang menggabungkan Filter & Sorting
   List<Todo> get listYangDitampilkan {
-    // 1. Saring berdasarkan prioritas
     List<Todo> hasil = todoList.where((todo) {
-      if (filterPrioritas == 'Semua') return true;
-      return todo.prioritas == filterPrioritas;
-    }).toList();
+      // 1. Lulus Filter Prioritas
+      bool cocokPrioritas =
+          (filterPrioritas == 'Semua') || (todo.prioritas == filterPrioritas);
 
-    // 2. Urutkan berdasarkan tanggal terdekat
+      // 2. Lulus Filter Pencarian (Judul atau Tanggal)
+      bool cocokSearch = true;
+      if (searchQuery.isNotEmpty) {
+        String teksCari = searchQuery.toLowerCase();
+
+        // Cek apakah judul cocok
+        bool judulCocok = todo.judul.toLowerCase().contains(teksCari);
+
+        // Cek apakah format tanggal cocok (misal: "12/8" atau "2026")
+        bool tanggalCocok = false;
+        if (todo.deadline != null) {
+          String tanggalString =
+              '${todo.deadline!.day}/${todo.deadline!.month}/${todo.deadline!.year}';
+          tanggalCocok = tanggalString.contains(teksCari);
+        }
+
+        cocokSearch = judulCocok || tanggalCocok; // Lulus jika salah satu cocok
+      }
+      // Harus lulus prioritas DAN pencarian
+      return cocokPrioritas && cocokSearch;
+    }).toList();
+    // 3. Urutkan berdasarkan tanggal terdekat
     if (sortDeadlineTerdekat) {
       hasil.sort((a, b) {
         if (a.deadline == null && b.deadline == null) return 0;
-        if (a.deadline == null) return 1; // Yang kosong ditaruh paling bawah
+        if (a.deadline == null) return 1;
         if (b.deadline == null) return -1;
         return a.deadline!.compareTo(b.deadline!);
       });
