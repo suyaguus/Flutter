@@ -104,45 +104,74 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             onTap: () {
-              showDialog(
+              showGeneralDialog(
                 context: context,
-                builder: (context) => AlertDialog(
-                  title: Text(
-                    tr('Bersihkan Tugas Selesai?', 'Clear Completed Tasks?'),
-                  ),
-                  content: Text(
-                    tr(
-                      'Semua tugas yang sudah dicentang akan dihapus selamanya.',
-                      'All checked tasks will be permanently deleted.',
+                barrierDismissible: true,
+                barrierLabel: 'Tutup Popup',
+                barrierColor: Colors.black54,
+                transitionDuration: const Duration(milliseconds: 400),
+                transitionBuilder: (context, animation, secondaryAnimation, child) {
+                  return ScaleTransition(
+                    scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+                    child: FadeTransition(opacity: animation, child: child),
+                  );
+                },
+                pageBuilder: (context, animation, secondaryAnimation) {
+                  return AlertDialog(
+                    title: Text(
+                      tr('Bersihkan Tugas Selesai?', 'Clear Completed Tasks?'),
                     ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(tr('Batal', 'Cancel')),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        widget.onBersihkanSelesai();
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              tr(
-                                'Tugas selesai telah dibersihkan!',
-                                'Completed tasks have been cleared!',
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                      child: Text(
-                        tr('Bersihkan', 'Clear'),
-                        style: const TextStyle(color: Colors.orange),
+                    content: Text(
+                      tr(
+                        'Semua tugas yang sudah dicentang akan dihapus selamanya.',
+                        'All checked tasks will be permanently deleted.',
                       ),
                     ),
-                  ],
-                ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text(tr('Batal', 'Cancel')),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          widget.onBersihkanSelesai();
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: Colors.orange.shade600,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              content: Row(
+                                children: [
+                                  const Icon(Icons.delete_sweep, color: Colors.white),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      tr(
+                                        'Tugas selesai telah dibersihkan!',
+                                        'Completed tasks have been cleared!',
+                                      ),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                        child: Text(
+                          tr('Bersihkan', 'Clear'),
+                          style: const TextStyle(color: Colors.orange),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               );
             },
           ),
@@ -161,46 +190,75 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             onTap: () {
-              showDialog(
+              showGeneralDialog(
                 context: context,
-                builder: (context) => AlertDialog(
-                  title: Text(tr('Peringatan Bahaya!', 'Danger Warning!')),
-                  content: Text(
-                    tr(
-                      'Apakah Anda yakin ingin menghapus SELURUH daftar tugas? Tindakan ini tidak bisa dibatalkan.',
-                      'Are you sure you want to delete the ENTIRE task list? This action cannot be undone.',
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(tr('Batal', 'Cancel')),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        widget.onHapusSemua();
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              tr(
-                                'Seluruh data telah dihapus!',
-                                'All data has been deleted!',
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                      child: Text(
-                        tr('Hapus Semua', 'Delete All'),
-                        style: const TextStyle(
-                          color: Colors.red,
-                          fontWeight: FontWeight.bold,
-                        ),
+                barrierDismissible: true,
+                barrierLabel: 'Tutup Popup',
+                barrierColor: Colors.black54,
+                transitionDuration: const Duration(milliseconds: 400),
+                transitionBuilder: (context, animation, secondaryAnimation, child) {
+                  return ScaleTransition(
+                    scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+                    child: FadeTransition(opacity: animation, child: child),
+                  );
+                },
+                pageBuilder: (context, animation, secondaryAnimation) {
+                  return AlertDialog(
+                    title: Text(tr('Peringatan Bahaya!', 'Danger Warning!')),
+                    content: Text(
+                      tr(
+                        'Apakah Anda yakin ingin menghapus SELURUH daftar tugas? Tindakan ini tidak bisa dibatalkan.',
+                        'Are you sure you want to delete the ENTIRE task list? This action cannot be undone.',
                       ),
                     ),
-                  ],
-                ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text(tr('Batal', 'Cancel')),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          widget.onHapusSemua();
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: Colors.red.shade600,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              content: Row(
+                                children: [
+                                  const Icon(Icons.delete_forever, color: Colors.white),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      tr(
+                                        'Seluruh data telah dihapus!',
+                                        'All data has been deleted!',
+                                      ),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                        child: Text(
+                          tr('Hapus Semua', 'Delete All'),
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               );
             },
           ),
