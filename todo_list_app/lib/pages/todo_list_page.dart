@@ -209,11 +209,47 @@ class _TodoListPageState extends State<TodoListPage> {
                 ),
                 TextButton(
                   onPressed: () {
+                    // JIKA INPUTAN KOSONG:
                     if (_taskController.text.trim().isEmpty) {
                       setStateDialog(() {
                         isError = true;
                       });
-                    } else {
+
+                      // --- TAMPILKAN SNACKBAR PERINGATAN MERAH ---
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: Colors.red.shade600, // Warna merah
+                          behavior:
+                              SnackBarBehavior.floating, // Desain melayang
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          content: Row(
+                            children: [
+                              const Icon(
+                                Icons.error_outline,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  tr(
+                                    'Nama tugas wajib diisi!',
+                                    'Task name is required!',
+                                  ),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    // JIKA INPUTAN BENAR (TERISI):
+                    else {
                       setState(() {
                         todoList.add(
                           Todo(
@@ -414,11 +450,46 @@ class _TodoListPageState extends State<TodoListPage> {
                     ),
                     TextButton(
                       onPressed: () {
+                        // JIKA INPUTAN KOSONG SAAT EDIT:
                         if (_taskController.text.trim().isEmpty) {
                           setStateDialog(() {
                             isError = true;
                           });
-                        } else {
+
+                          // --- TAMPILKAN SNACKBAR PERINGATAN MERAH ---
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: Colors.red.shade600,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              content: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.error_outline,
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      tr(
+                                        'Nama tugas wajib diisi!',
+                                        'Task name is required!',
+                                      ),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+                        // JIKA INPUTAN BENAR:
+                        else {
                           setState(() {
                             todoList[index].judul = _taskController.text;
                             todoList[index].prioritas = prioritasDipilih;
