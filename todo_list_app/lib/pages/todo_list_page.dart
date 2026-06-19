@@ -21,6 +21,7 @@ class _TodoListPageState extends State<TodoListPage> {
   bool sortDeadlineTerdekat = false;
   String searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
+  bool isGridView = false; // <-- STATE UNTUK MODE GRID
 
   @override
   void initState() {
@@ -809,6 +810,115 @@ class _TodoListPageState extends State<TodoListPage> {
       ),
     );
   }
+  // --- WIDGET CARD UNTUK GRID & LIST ---
+  Widget _buildTaskCard(Todo item, int realIndex) {
+    return Card(
+      color: item.prioritas == 'Penting'
+          ? Colors.red.shade50
+          : (item.prioritas == 'Mendesak'
+              ? Colors.orange.shade50
+              : Colors.green.shade50),
+      margin: EdgeInsets.symmetric(
+        horizontal: isGridView ? 8 : 16,
+        vertical: 8,
+      ),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onLongPress: () => _editList(realIndex),
+        borderRadius: BorderRadius.circular(12),
+        child: isGridView
+            ? Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.judul,
+                            style: TextStyle(
+                              color: Colors.black87,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              decoration: item.isSelesai
+                                  ? TextDecoration.lineThrough
+                                  : TextDecoration.none,
+                            ),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: Checkbox(
+                            value: item.isSelesai,
+                            activeColor: Colors.deepPurple,
+                            side: const BorderSide(
+                                color: Colors.black54, width: 2),
+                            onChanged: (bool? nilaiBaru) {
+                              setState(() {
+                                todoList[realIndex].isSelesai = nilaiBaru!;
+                                _simpanData();
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    if (item.deadline != null)
+                      Row(
+                        children: [
+                          const Icon(Icons.calendar_today,
+                              size: 14, color: Colors.black54),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${item.deadline!.day}/${item.deadline!.month}/${item.deadline!.year}',
+                            style: const TextStyle(
+                                color: Colors.black54, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              )
+            : ListTile(
+                leading: Checkbox(
+                  value: item.isSelesai,
+                  activeColor: Colors.deepPurple,
+                  side: const BorderSide(color: Colors.black54, width: 2),
+                  onChanged: (bool? nilaiBaru) {
+                    setState(() {
+                      todoList[realIndex].isSelesai = nilaiBaru!;
+                      _simpanData();
+                    });
+                  },
+                ),
+                title: Text(
+                  item.judul,
+                  style: TextStyle(
+                    color: Colors.black87,
+                    fontWeight: FontWeight.bold,
+                    decoration: item.isSelesai
+                        ? TextDecoration.lineThrough
+                        : TextDecoration.none,
+                  ),
+                ),
+                subtitle: item.deadline != null
+                    ? Text(
+                        '${tr('Tenggat:', 'Deadline:')} ${item.deadline!.day}/${item.deadline!.month}/${item.deadline!.year}',
+                        style: const TextStyle(color: Colors.black54),
+                      )
+                    : null,
+              ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -817,8 +927,18 @@ class _TodoListPageState extends State<TodoListPage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text('My Todo List'),
+        title: const Text('My Todo List'),
         actions: [
+          // --- TOMBOL TOGGLE GRID / LIST ---
+          IconButton(
+            icon: Icon(isGridView ? Icons.view_list : Icons.grid_view),
+            tooltip: isGridView ? tr('Mode List', 'List Mode') : tr('Mode Grid', 'Grid Mode'),
+            onPressed: () {
+              setState(() {
+                isGridView = !isGridView;
+              });
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             tooltip: tr('Pengaturan', 'Settings'),
@@ -979,64 +1099,29 @@ class _TodoListPageState extends State<TodoListPage> {
                       ],
                     ),
                   )
-                : ListView.builder(
-                    itemCount: daftarTampil.length,
-                    itemBuilder: (context, index) {
-                      Todo item = daftarTampil[index];
-                      int realIndex = todoList.indexOf(item);
-
-                      return Card(
-                        color: item.prioritas == 'Penting'
-                            ? Colors.red.shade50
-                            : (item.prioritas == 'Mendesak'
-                                  ? Colors.orange.shade50
-                                  : Colors.green.shade50),
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
+                : isGridView
+                    ? GridView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2, // 2 Kolom
+                          childAspectRatio: 1.1, // Agar kotak tidak terlalu pipih
                         ),
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: ListTile(
-                          // Sensor untuk mendeteksi "Tahan Lama" (sekitar setengah hingga 1 detik)
-                          onLongPress: () {
-                            _editList(realIndex); // Buka popup detail
-                          },
-                          leading: Checkbox(
-                            value: item.isSelesai,
-                            side: const BorderSide(
-                              color: Colors.black54,
-                              width: 2,
-                            ),
-                            onChanged: (bool? nilaiBaru) {
-                              setState(() {
-                                todoList[realIndex].isSelesai = nilaiBaru!;
-                                _simpanData();
-                              });
-                            },
-                          ),
-                          title: Text(
-                            item.judul,
-                            style: TextStyle(
-                              color: Colors.black87,
-                              decoration: item.isSelesai
-                                  ? TextDecoration.lineThrough
-                                  : TextDecoration.none,
-                            ),
-                          ),
-                          subtitle: item.deadline != null
-                              ? Text(
-                                  '${tr('Tenggat:', 'Deadline:')} ${item.deadline!.day}/${item.deadline!.month}/${item.deadline!.year}',
-                                  style: const TextStyle(color: Colors.black54),
-                                )
-                              : null,
-                          // PENTING: Bagian 'trailing' yang berisi ikon edit dan hapus sudah kita hapus sepenuhnya!
-                        ),
-                      );
-                    },
-                  ),
+                        itemCount: daftarTampil.length,
+                        itemBuilder: (context, index) {
+                          Todo item = daftarTampil[index];
+                          int realIndex = todoList.indexOf(item);
+                          return _buildTaskCard(item, realIndex);
+                        },
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.only(top: 8, bottom: 8),
+                        itemCount: daftarTampil.length,
+                        itemBuilder: (context, index) {
+                          Todo item = daftarTampil[index];
+                          int realIndex = todoList.indexOf(item);
+                          return _buildTaskCard(item, realIndex);
+                        },
+                      ),
           ),
         ],
       ),
