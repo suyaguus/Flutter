@@ -5,6 +5,9 @@ import '../models/todo.dart';
 import 'settings_page.dart';
 import '../main.dart'; // Impor untuk mengambil fungsi tr()
 import 'package:reorderable_grid_view/reorderable_grid_view.dart';
+import '../widgets/progress_dashboard.dart';
+import '../widgets/task_card.dart';
+import '../widgets/task_form_dialog.dart';
 
 class TodoListPage extends StatefulWidget {
   const TodoListPage({super.key});
@@ -15,8 +18,6 @@ class TodoListPage extends StatefulWidget {
 
 class _TodoListPageState extends State<TodoListPage> {
   List<Todo> todoList = [];
-  final TextEditingController _taskController = TextEditingController();
-
   // --- STATE UNTUK FILTER, SORTING, & SEARCH ---
   String filterPrioritas = 'Semua';
   bool sortDeadlineTerdekat = false;
@@ -62,11 +63,6 @@ class _TodoListPageState extends State<TodoListPage> {
   }
 
   void _tambahList() {
-    String prioritasDipilih = "Tidak Mendesak";
-    DateTime? tanggalDipilih;
-    bool isError = false;
-
-    // --- MENGGUNAKAN showGeneralDialog UNTUK ANIMASI IN/OUT KUSTOM ---
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
@@ -80,227 +76,18 @@ class _TodoListPageState extends State<TodoListPage> {
         );
       },
       pageBuilder: (context, animation, secondaryAnimation) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              title: Text(tr('Tambah Tugas Baru', 'Add New Task')),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: _taskController,
-                    decoration: InputDecoration(
-                      hintText: tr('Nama Tugas', 'Task Name'),
-                      errorText: isError
-                          ? tr(
-                              'Nama tugas tidak boleh kosong!',
-                              'Task name cannot be empty!',
-                            )
-                          : null,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // --- MENGGANTI DROPDOWN DENGAN TOMBOL ANIMASI ---
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        tr('Prioritas:', 'Priority:'),
-                        style: const TextStyle(
-                          color: Colors.deepPurple,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: ['Penting', 'Mendesak', 'Tidak Mendesak'].map((
-                          String val,
-                        ) {
-                          bool isSelected = prioritasDipilih == val;
-                          // Menentukan warna tombol berdasarkan prioritas
-                          Color chipColor = val == 'Penting'
-                              ? Colors.red
-                              : (val == 'Mendesak'
-                                    ? Colors.orange
-                                    : Colors.green);
-
-                          return GestureDetector(
-                            onTap: () {
-                              setStateDialog(() {
-                                prioritasDipilih = val;
-                              });
-                            },
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves
-                                  .easeOutCubic, // Animasi transisi yang halus
-                              padding: EdgeInsets.symmetric(
-                                vertical: isSelected ? 10 : 6,
-                                horizontal: isSelected ? 14 : 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? chipColor
-                                    : Colors.grey.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: isSelected
-                                    ? [
-                                        BoxShadow(
-                                          color: chipColor.withOpacity(0.4),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ]
-                                    : [],
-                              ),
-                              child: Text(
-                                translatePriority(val),
-                                style: TextStyle(
-                                  color: isSelected
-                                      ? Colors.white
-                                      : Colors.black87,
-                                  fontWeight: isSelected
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  TextButton.icon(
-                    icon: const Icon(Icons.calendar_today),
-                    label: Text(
-                      tanggalDipilih == null
-                          ? tr(
-                              'Tenggat Waktu: Belum diatur',
-                              'Deadline: Not set',
-                            )
-                          : '${tr('Tenggat:', 'Deadline:')} ${tanggalDipilih!.day}/${tanggalDipilih!.month}/${tanggalDipilih!.year}',
-                    ),
-                    onPressed: () async {
-                      DateTime? picked = await showDatePicker(
-                        context: context,
-                        initialDate: DateTime.now(),
-                        firstDate: DateTime.now(),
-                        lastDate: DateTime(2100),
-                      );
-                      if (picked != null) {
-                        setStateDialog(() {
-                          tanggalDipilih = picked;
-                        });
-                      }
-                    },
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    _taskController.clear();
-                    Navigator.of(context).pop();
-                  },
-                  child: Text(tr('Batal', 'Cancel')),
+        return TaskFormDialog(
+          onSave: (judul, prioritas, deadline) {
+            setState(() {
+              todoList.add(
+                Todo(
+                  judul: judul,
+                  prioritas: prioritas,
+                  deadline: deadline,
                 ),
-                TextButton(
-                  onPressed: () {
-                    // JIKA INPUTAN KOSONG:
-                    if (_taskController.text.trim().isEmpty) {
-                      setStateDialog(() {
-                        isError = true;
-                      });
-
-                      // --- TAMPILKAN SNACKBAR PERINGATAN MERAH ---
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          backgroundColor: Colors.red.shade600,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          content: Row(
-                            children: [
-                              const Icon(
-                                Icons.error_outline,
-                                color: Colors.white,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  tr(
-                                    'Nama tugas wajib diisi!',
-                                    'Task name is required!',
-                                  ),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-                    // JIKA INPUTAN BENAR (TERISI):
-                    else {
-                      setState(() {
-                        todoList.add(
-                          Todo(
-                            judul: _taskController.text,
-                            prioritas: prioritasDipilih,
-                            deadline: tanggalDipilih,
-                          ),
-                        );
-                        _simpanData();
-                      });
-                      _taskController.clear();
-                      Navigator.of(context).pop();
-
-                      // --- TAMPILKAN SNACKBAR SUKSES HIJAU ---
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          backgroundColor: Colors.green.shade600,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          content: Row(
-                            children: [
-                              const Icon(
-                                Icons.check_circle_outline,
-                                color: Colors.white,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  tr(
-                                    'Tugas berhasil ditambahkan!',
-                                    'Task successfully added!',
-                                  ),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-                  },
-                  child: Text(tr('Tambah', 'Add')),
-                ),
-              ],
-            );
+              );
+              _simpanData();
+            });
           },
         );
       },
@@ -308,15 +95,6 @@ class _TodoListPageState extends State<TodoListPage> {
   }
 
   void _editList(int index) {
-    _taskController.text = todoList[index].judul;
-    String prioritasDipilih = todoList[index].prioritas;
-    DateTime? tanggalDipilih = todoList[index].deadline;
-    bool isError = false;
-
-    if (!['Penting', 'Mendesak', 'Tidak Mendesak'].contains(prioritasDipilih)) {
-      prioritasDipilih = 'Tidak Mendesak';
-    }
-
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
@@ -330,239 +108,18 @@ class _TodoListPageState extends State<TodoListPage> {
         );
       },
       pageBuilder: (context, animation, secondaryAnimation) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              title: Text(tr('Edit Tugas', 'Edit Task')),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: _taskController,
-                    decoration: InputDecoration(
-                      hintText: tr('Nama Tugas', 'Task Name'),
-                      errorText: isError
-                          ? tr(
-                              'Nama tugas tidak boleh kosong!',
-                              'Task name cannot be empty!',
-                            )
-                          : null,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // --- MENGGANTI DROPDOWN DENGAN TOMBOL ANIMASI ---
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        tr('Prioritas:', 'Priority:'),
-                        style: const TextStyle(
-                          color: Colors.deepPurple,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: ['Penting', 'Mendesak', 'Tidak Mendesak'].map(
-                          (String val) {
-                            bool isSelected = prioritasDipilih == val;
-                            Color chipColor = val == 'Penting'
-                                ? Colors.red
-                                : (val == 'Mendesak'
-                                      ? Colors.orange
-                                      : Colors.green);
-
-                            return GestureDetector(
-                              onTap: () {
-                                setStateDialog(() {
-                                  prioritasDipilih = val;
-                                });
-                              },
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                curve: Curves.easeOutCubic,
-                                padding: EdgeInsets.symmetric(
-                                  vertical: isSelected ? 10 : 6,
-                                  horizontal: isSelected ? 14 : 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? chipColor
-                                      : Colors.grey.withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(20),
-                                  boxShadow: isSelected
-                                      ? [
-                                          BoxShadow(
-                                            color: chipColor.withOpacity(0.4),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ]
-                                      : [],
-                                ),
-                                child: Text(
-                                  translatePriority(val),
-                                  style: TextStyle(
-                                    color: isSelected
-                                        ? Colors.white
-                                        : Colors.black87,
-                                    fontWeight: isSelected
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ).toList(),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  TextButton.icon(
-                    icon: const Icon(Icons.calendar_today),
-                    label: Text(
-                      tanggalDipilih == null
-                          ? tr(
-                              'Tenggat Waktu: Belum diatur',
-                              'Deadline: Not set',
-                            )
-                          : '${tr('Tenggat:', 'Deadline:')} ${tanggalDipilih!.day}/${tanggalDipilih!.month}/${tanggalDipilih!.year}',
-                    ),
-                    onPressed: () async {
-                      DateTime? picked = await showDatePicker(
-                        context: context,
-                        initialDate: tanggalDipilih ?? DateTime.now(),
-                        firstDate: DateTime(2000),
-                        lastDate: DateTime(2100),
-                      );
-                      if (picked != null) {
-                        setStateDialog(() {
-                          tanggalDipilih = picked;
-                        });
-                      }
-                    },
-                  ),
-                ],
-              ),
-              actionsAlignment: MainAxisAlignment.spaceBetween,
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    _konfirmasiHapus(index);
-                  },
-                  child: Text(
-                    tr('Hapus', 'Delete'),
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextButton(
-                      onPressed: () {
-                        _taskController.clear();
-                        Navigator.of(context).pop();
-                      },
-                      child: Text(tr('Batal', 'Cancel')),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        // JIKA INPUTAN KOSONG SAAT EDIT:
-                        if (_taskController.text.trim().isEmpty) {
-                          setStateDialog(() {
-                            isError = true;
-                          });
-
-                          // --- TAMPILKAN SNACKBAR PERINGATAN MERAH ---
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              backgroundColor: Colors.red.shade600,
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              content: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.error_outline,
-                                    color: Colors.white,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      tr(
-                                        'Nama tugas wajib diisi!',
-                                        'Task name is required!',
-                                      ),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }
-                        // JIKA INPUTAN BENAR:
-                        // JIKA INPUTAN BENAR:
-                        else {
-                          setState(() {
-                            todoList[index].judul = _taskController.text;
-                            todoList[index].prioritas = prioritasDipilih;
-                            todoList[index].deadline = tanggalDipilih;
-                            _simpanData();
-                          });
-                          _taskController.clear();
-                          Navigator.of(context).pop();
-
-                          // --- TAMPILKAN SNACKBAR SUKSES HIJAU ---
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              backgroundColor:
-                                  Colors.green.shade600, // Warna Hijau Sukses
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              content: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.check_circle_outline,
-                                    color: Colors.white,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      tr(
-                                        'Tugas berhasil diperbarui!',
-                                        'Task successfully updated!',
-                                      ),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }
-                      },
-                      child: Text(tr('Simpan', 'Save')),
-                    ),
-                  ],
-                ),
-              ],
-            );
+        return TaskFormDialog(
+          initialTodo: todoList[index],
+          onDelete: () {
+            _konfirmasiHapus(index);
+          },
+          onSave: (judul, prioritas, deadline) {
+            setState(() {
+              todoList[index].judul = judul;
+              todoList[index].prioritas = prioritas;
+              todoList[index].deadline = deadline;
+              _simpanData();
+            });
           },
         );
       },
@@ -680,138 +237,6 @@ class _TodoListPageState extends State<TodoListPage> {
     return hasil;
   }
 
-  // --- WIDGET DASHBOARD PROGRESS BAR ---
-  Widget _buildProgressBar() {
-    int totalTugas = todoList.length;
-    // Menghitung berapa banyak tugas yang isSelesai == true
-    int tugasSelesai = todoList.where((t) => t.isSelesai).length;
-    // Menghindari error pembagian dengan nol
-    double progress = totalTugas == 0 ? 0.0 : tugasSelesai / totalTugas;
-
-    // Menyiapkan teks motivasi
-    String pesanTeks = '';
-    if (totalTugas == 0) {
-      pesanTeks = tr(
-        'Belum ada tugas, ayo buat sekarang!',
-        'No tasks yet, create one now!',
-      );
-    } else if (tugasSelesai == totalTugas) {
-      pesanTeks = tr(
-        'Luar biasa! Semua tugas selesai 🎉',
-        'Awesome! All tasks completed 🎉',
-      );
-    } else {
-      pesanTeks = tr(
-        'Anda telah menyelesaikan $tugasSelesai dari $totalTugas tugas.',
-        'You have completed $tugasSelesai of $totalTugas tasks.',
-      );
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(left: 16, right: 16, top: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        // Efek Gradasi warna Ungu yang elegan
-        gradient: LinearGradient(
-          colors: [Colors.deepPurple.shade300, Colors.deepPurple.shade800],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.deepPurple.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                tr('Ringkasan Tugas', 'Task Summary'),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Icon(Icons.analytics, color: Colors.white70),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            pesanTeks,
-            style: const TextStyle(color: Colors.white70, fontSize: 14),
-          ),
-          const SizedBox(height: 20),
-
-          // --- Animasi Garis Progres ---
-          TweenAnimationBuilder<double>(
-            tween: Tween<double>(begin: 0, end: progress),
-            duration: const Duration(
-              milliseconds: 1000,
-            ), // Bergerak mulus selama 1 detik
-            curve: Curves.easeOutCubic,
-            builder: (context, value, child) {
-              return Column(
-                children: [
-                  Stack(
-                    children: [
-                      // Rel Belakang (Abu-abu transparan)
-                      Container(
-                        height: 12,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      // Rel Depan (Putih solid yang bergerak memanjang)
-                      FractionallySizedBox(
-                        widthFactor: value,
-                        child: Container(
-                          height: 12,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(10),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.white.withOpacity(0.5),
-                                blurRadius: 6,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  // Teks Persentase yang ikut berjalan naik/turun
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      '${(value * 100).toInt()}%',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-  // --- WIDGET CARD UNTUK GRID & LIST ---
   // --- FUNGSI REORDER (SERET DAN SUSUN) ---
   void _onReorder(int oldIndex, int newIndex) {
     if (searchQuery.isNotEmpty || filterPrioritas != 'Semua' || sortDeadlineTerdekat) {
@@ -834,117 +259,6 @@ class _TodoListPageState extends State<TodoListPage> {
       todoList.insert(newIndex, item);
       _simpanData();
     });
-  }
-
-  // --- WIDGET CARD UNTUK GRID & LIST ---
-  Widget _buildTaskCard(Todo item, int realIndex) {
-    return Card(
-      key: ObjectKey(item),
-      color: item.prioritas == 'Penting'
-          ? Colors.red.shade50
-          : (item.prioritas == 'Mendesak'
-              ? Colors.orange.shade50
-              : Colors.green.shade50),
-      margin: EdgeInsets.symmetric(
-        horizontal: isGridView ? 8 : 16,
-        vertical: 8,
-      ),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: () => _editList(realIndex),
-        borderRadius: BorderRadius.circular(12),
-        child: isGridView
-            ? Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            item.judul,
-                            style: TextStyle(
-                              color: Colors.black87,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              decoration: item.isSelesai
-                                  ? TextDecoration.lineThrough
-                                  : TextDecoration.none,
-                            ),
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: Checkbox(
-                            value: item.isSelesai,
-                            activeColor: Colors.deepPurple,
-                            side: const BorderSide(
-                                color: Colors.black54, width: 2),
-                            onChanged: (bool? nilaiBaru) {
-                              setState(() {
-                                todoList[realIndex].isSelesai = nilaiBaru!;
-                                _simpanData();
-                              });
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-                    if (item.deadline != null)
-                      Row(
-                        children: [
-                          const Icon(Icons.calendar_today,
-                              size: 14, color: Colors.black54),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${item.deadline!.day}/${item.deadline!.month}/${item.deadline!.year}',
-                            style: const TextStyle(
-                                color: Colors.black54, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-              )
-            : ListTile(
-                leading: Checkbox(
-                  value: item.isSelesai,
-                  activeColor: Colors.deepPurple,
-                  side: const BorderSide(color: Colors.black54, width: 2),
-                  onChanged: (bool? nilaiBaru) {
-                    setState(() {
-                      todoList[realIndex].isSelesai = nilaiBaru!;
-                      _simpanData();
-                    });
-                  },
-                ),
-                title: Text(
-                  item.judul,
-                  style: TextStyle(
-                    color: Colors.black87,
-                    fontWeight: FontWeight.bold,
-                    decoration: item.isSelesai
-                        ? TextDecoration.lineThrough
-                        : TextDecoration.none,
-                  ),
-                ),
-                subtitle: item.deadline != null
-                    ? Text(
-                        '${tr('Tenggat:', 'Deadline:')} ${item.deadline!.day}/${item.deadline!.month}/${item.deadline!.year}',
-                        style: const TextStyle(color: Colors.black54),
-                      )
-                    : null,
-              ),
-      ),
-    );
   }
 
   @override
@@ -986,8 +300,10 @@ class _TodoListPageState extends State<TodoListPage> {
       ),
       body: Column(
         children: [
-          // MEMUNCULKAN DASHBOARD DI SINI
-          _buildProgressBar(),
+          ProgressDashboard(
+            totalTugas: todoList.length,
+            tugasSelesai: todoList.where((t) => t.isSelesai).length,
+          ),
 
           Padding(
             padding: const EdgeInsets.all(16.0),
@@ -1138,7 +454,18 @@ class _TodoListPageState extends State<TodoListPage> {
                         itemBuilder: (context, index) {
                           Todo item = daftarTampil[index];
                           int realIndex = todoList.indexOf(item);
-                          return _buildTaskCard(item, realIndex);
+                          return TaskCard(
+                            key: ObjectKey(item),
+                            item: item,
+                            isGridView: true,
+                            onTap: () => _editList(realIndex),
+                            onCheckboxChanged: (bool? nilaiBaru) {
+                              setState(() {
+                                todoList[realIndex].isSelesai = nilaiBaru!;
+                                _simpanData();
+                              });
+                            },
+                          );
                         },
                       )
                     : ReorderableListView.builder(
@@ -1148,7 +475,18 @@ class _TodoListPageState extends State<TodoListPage> {
                         itemBuilder: (context, index) {
                           Todo item = daftarTampil[index];
                           int realIndex = todoList.indexOf(item);
-                          return _buildTaskCard(item, realIndex);
+                          return TaskCard(
+                            key: ObjectKey(item),
+                            item: item,
+                            isGridView: false,
+                            onTap: () => _editList(realIndex),
+                            onCheckboxChanged: (bool? nilaiBaru) {
+                              setState(() {
+                                todoList[realIndex].isSelesai = nilaiBaru!;
+                                _simpanData();
+                              });
+                            },
+                          );
                         },
                       ),
           ),
