@@ -4,6 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/todo.dart';
 import 'settings_page.dart';
 import '../main.dart'; // Impor untuk mengambil fungsi tr()
+import 'package:reorderable_grid_view/reorderable_grid_view.dart';
+import '../widgets/progress_dashboard.dart';
+import '../widgets/task_card.dart';
+import '../widgets/task_form_dialog.dart';
 
 class TodoListPage extends StatefulWidget {
   const TodoListPage({super.key});
@@ -14,13 +18,12 @@ class TodoListPage extends StatefulWidget {
 
 class _TodoListPageState extends State<TodoListPage> {
   List<Todo> todoList = [];
-  final TextEditingController _taskController = TextEditingController();
-
   // --- STATE UNTUK FILTER, SORTING, & SEARCH ---
   String filterPrioritas = 'Semua';
   bool sortDeadlineTerdekat = false;
   String searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
+  bool isGridView = false; // <-- STATE UNTUK MODE GRID
 
   @override
   void initState() {
@@ -60,122 +63,31 @@ class _TodoListPageState extends State<TodoListPage> {
   }
 
   void _tambahList() {
-    String prioritasDipilih = "Tidak Mendesak";
-    DateTime? tanggalDipilih;
-    bool isError = false;
-
-    showDialog(
+    showGeneralDialog(
       context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              title: Text(tr('Tambah Tugas Baru', 'Add New Task')),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: _taskController,
-                    decoration: InputDecoration(
-                      hintText: tr('Nama Tugas', 'Task Name'),
-                      errorText: isError
-                          ? tr(
-                              'Nama tugas tidak boleh kosong!',
-                              'Task name cannot be empty!',
-                            )
-                          : null,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    value: prioritasDipilih,
-                    decoration: InputDecoration(
-                      labelText: tr('Prioritas', 'Priority'),
-                    ),
-                    items: ['Penting', 'Mendesak', 'Tidak Mendesak'].map((
-                      String val,
-                    ) {
-                      return DropdownMenuItem(
-                        value: val,
-                        child: Text(translatePriority(val)),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      setStateDialog(() {
-                        prioritasDipilih = val!;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextButton.icon(
-                    icon: const Icon(Icons.calendar_today),
-                    label: Text(
-                      tanggalDipilih == null
-                          ? tr(
-                              'Tenggat Waktu: Belum diatur',
-                              'Deadline: Not set',
-                            )
-                          : '${tr('Tenggat:', 'Deadline:')} ${tanggalDipilih!.day}/${tanggalDipilih!.month}/${tanggalDipilih!.year}',
-                    ),
-                    onPressed: () async {
-                      DateTime? picked = await showDatePicker(
-                        context: context,
-                        initialDate: DateTime.now(),
-                        firstDate: DateTime.now(),
-                        lastDate: DateTime(2100),
-                      );
-                      if (picked != null) {
-                        setStateDialog(() {
-                          tanggalDipilih = picked;
-                        });
-                      }
-                    },
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    _taskController.clear();
-                    Navigator.of(context).pop();
-                  },
-                  child: Text(tr('Batal', 'Cancel')),
+      barrierDismissible: true,
+      barrierLabel: 'Tutup Popup',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 400),
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return ScaleTransition(
+          scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+          child: FadeTransition(opacity: animation, child: child),
+        );
+      },
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return TaskFormDialog(
+          onSave: (judul, prioritas, deadline) {
+            setState(() {
+              todoList.add(
+                Todo(
+                  judul: judul,
+                  prioritas: prioritas,
+                  deadline: deadline,
                 ),
-                TextButton(
-                  onPressed: () {
-                    if (_taskController.text.trim().isEmpty) {
-                      setStateDialog(() {
-                        isError = true;
-                      });
-                    } else {
-                      setState(() {
-                        todoList.add(
-                          Todo(
-                            judul: _taskController.text,
-                            prioritas: prioritasDipilih,
-                            deadline: tanggalDipilih,
-                          ),
-                        );
-                        _simpanData();
-                      });
-                      _taskController.clear();
-                      Navigator.of(context).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            tr(
-                              'Tugas berhasil ditambahkan!',
-                              'Task successfully added!',
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-                  },
-                  child: Text(tr('Tambah', 'Add')),
-                ),
-              ],
-            );
+              );
+              _simpanData();
+            });
           },
         );
       },
@@ -183,113 +95,31 @@ class _TodoListPageState extends State<TodoListPage> {
   }
 
   void _editList(int index) {
-    _taskController.text = todoList[index].judul;
-    String prioritasDipilih = todoList[index].prioritas;
-    DateTime? tanggalDipilih = todoList[index].deadline;
-    bool isError = false;
-
-    if (!['Penting', 'Mendesak', 'Tidak Mendesak'].contains(prioritasDipilih)) {
-      prioritasDipilih = 'Tidak Mendesak';
-    }
-
-    showDialog(
+    showGeneralDialog(
       context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              title: Text(tr('Edit Tugas', 'Edit Task')),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: _taskController,
-                    decoration: InputDecoration(
-                      hintText: tr('Nama Tugas', 'Task Name'),
-                      errorText: isError
-                          ? tr(
-                              'Nama tugas tidak boleh kosong!',
-                              'Task name cannot be empty!',
-                            )
-                          : null,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    value: prioritasDipilih,
-                    decoration: InputDecoration(
-                      labelText: tr('Prioritas', 'Priority'),
-                    ),
-                    items: ['Penting', 'Mendesak', 'Tidak Mendesak'].map((
-                      String val,
-                    ) {
-                      return DropdownMenuItem(
-                        value: val,
-                        child: Text(translatePriority(val)),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      setStateDialog(() {
-                        prioritasDipilih = val!;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextButton.icon(
-                    icon: const Icon(Icons.calendar_today),
-                    label: Text(
-                      tanggalDipilih == null
-                          ? tr(
-                              'Tenggat Waktu: Belum diatur',
-                              'Deadline: Not set',
-                            )
-                          : '${tr('Tenggat:', 'Deadline:')} ${tanggalDipilih!.day}/${tanggalDipilih!.month}/${tanggalDipilih!.year}',
-                    ),
-                    onPressed: () async {
-                      DateTime? picked = await showDatePicker(
-                        context: context,
-                        initialDate: tanggalDipilih ?? DateTime.now(),
-                        firstDate: DateTime(2000),
-                        lastDate: DateTime(2100),
-                      );
-                      if (picked != null) {
-                        setStateDialog(() {
-                          tanggalDipilih = picked;
-                        });
-                      }
-                    },
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    _taskController.clear();
-                    Navigator.of(context).pop();
-                  },
-                  child: Text(tr('Batal', 'Cancel')),
-                ),
-                TextButton(
-                  onPressed: () {
-                    if (_taskController.text.trim().isEmpty) {
-                      setStateDialog(() {
-                        isError = true;
-                      });
-                    } else {
-                      setState(() {
-                        todoList[index].judul = _taskController.text;
-                        todoList[index].prioritas = prioritasDipilih;
-                        todoList[index].deadline = tanggalDipilih;
-                        _simpanData();
-                      });
-                      _taskController.clear();
-                      Navigator.of(context).pop();
-                    }
-                  },
-                  child: Text(tr('Simpan', 'Save')),
-                ),
-              ],
-            );
+      barrierDismissible: true,
+      barrierLabel: 'Tutup Popup',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 400),
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return ScaleTransition(
+          scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+          child: FadeTransition(opacity: animation, child: child),
+        );
+      },
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return TaskFormDialog(
+          initialTodo: todoList[index],
+          onDelete: () {
+            _konfirmasiHapus(index);
+          },
+          onSave: (judul, prioritas, deadline) {
+            setState(() {
+              todoList[index].judul = judul;
+              todoList[index].prioritas = prioritas;
+              todoList[index].deadline = deadline;
+              _simpanData();
+            });
           },
         );
       },
@@ -297,9 +127,28 @@ class _TodoListPageState extends State<TodoListPage> {
   }
 
   void _konfirmasiHapus(int index) {
-    showDialog(
+    // --- MENGGUNAKAN showGeneralDialog UNTUK ANIMASI KUSTOM ---
+    showGeneralDialog(
       context: context,
-      builder: (BuildContext context) {
+      barrierDismissible: true, // Bisa ditutup dengan ketuk di luar
+      barrierLabel: 'Tutup Popup',
+      barrierColor: Colors.black54, // Latar belakang redup
+      transitionDuration: const Duration(milliseconds: 400), // Durasi halus
+      // MENGATUR EFEK ANIMASI IN / OUT
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return ScaleTransition(
+          // Efek membesar (Scale) dengan pantulan (easeOutBack)
+          scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+          child: FadeTransition(
+            // Efek memudar perlahan (Fade)
+            opacity: animation,
+            child: child,
+          ),
+        );
+      },
+
+      // ISI DARI POPUP (Sama seperti sebelumnya)
+      pageBuilder: (context, animation, secondaryAnimation) {
         return AlertDialog(
           title: Text(tr('Hapus Tugas?', 'Delete Task?')),
           content: Text(
@@ -388,6 +237,30 @@ class _TodoListPageState extends State<TodoListPage> {
     return hasil;
   }
 
+  // --- FUNGSI REORDER (SERET DAN SUSUN) ---
+  void _onReorder(int oldIndex, int newIndex) {
+    if (searchQuery.isNotEmpty || filterPrioritas != 'Semua' || sortDeadlineTerdekat) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            tr('Tidak bisa menyusun saat filter/pencarian aktif!', 'Cannot reorder while filtering/searching!'),
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      if (newIndex > oldIndex) {
+        newIndex -= 1; // Penyesuaian indeks karena item dihapus dulu
+      }
+      final Todo item = todoList.removeAt(oldIndex);
+      todoList.insert(newIndex, item);
+      _simpanData();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     List<Todo> daftarTampil = listYangDitampilkan;
@@ -395,8 +268,18 @@ class _TodoListPageState extends State<TodoListPage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text('My Todo List'),
+        title: const Text('My Todo List'),
         actions: [
+          // --- TOMBOL TOGGLE GRID / LIST ---
+          IconButton(
+            icon: Icon(isGridView ? Icons.view_list : Icons.grid_view),
+            tooltip: isGridView ? tr('Mode List', 'List Mode') : tr('Mode Grid', 'Grid Mode'),
+            onPressed: () {
+              setState(() {
+                isGridView = !isGridView;
+              });
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             tooltip: tr('Pengaturan', 'Settings'),
@@ -417,6 +300,11 @@ class _TodoListPageState extends State<TodoListPage> {
       ),
       body: Column(
         children: [
+          ProgressDashboard(
+            totalTugas: todoList.length,
+            tugasSelesai: todoList.where((t) => t.isSelesai).length,
+          ),
+
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -554,82 +442,53 @@ class _TodoListPageState extends State<TodoListPage> {
                       ],
                     ),
                   )
-                : ListView.builder(
-                    itemCount: daftarTampil.length,
-                    itemBuilder: (context, index) {
-                      Todo item = daftarTampil[index];
-                      int realIndex = todoList.indexOf(item);
-
-                      return Card(
-                        color: item.prioritas == 'Penting'
-                            ? Colors.red.withOpacity(0.2)
-                            : (item.prioritas == 'Mendesak'
-                                  ? Colors.orange.withOpacity(0.2)
-                                  : Colors.green.withOpacity(0.2)),
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
+                : isGridView
+                    ? ReorderableGridView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2, // 2 Kolom
+                          childAspectRatio: 1.1, // Agar kotak tidak terlalu pipih
                         ),
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: ListTile(
-                          leading: Checkbox(
-                            value: item.isSelesai,
-                            side: const BorderSide(
-                              color: Colors.black54,
-                              width: 2,
-                            ),
-                            onChanged: (bool? nilaiBaru) {
+                        itemCount: daftarTampil.length,
+                        onReorder: _onReorder,
+                        itemBuilder: (context, index) {
+                          Todo item = daftarTampil[index];
+                          int realIndex = todoList.indexOf(item);
+                          return TaskCard(
+                            key: ObjectKey(item),
+                            item: item,
+                            isGridView: true,
+                            onTap: () => _editList(realIndex),
+                            onCheckboxChanged: (bool? nilaiBaru) {
                               setState(() {
                                 todoList[realIndex].isSelesai = nilaiBaru!;
                                 _simpanData();
                               });
                             },
-                          ),
-                          title: Text(
-                            item.judul,
-                            style: TextStyle(
-                              color: Colors.black87,
-                              decoration: item.isSelesai
-                                  ? TextDecoration.lineThrough
-                                  : TextDecoration.none,
-                            ),
-                          ),
-                          subtitle: item.deadline != null
-                              ? Text(
-                                  '${tr('Tenggat:', 'Deadline:')} ${item.deadline!.day}/${item.deadline!.month}/${item.deadline!.year}',
-                                  style: const TextStyle(color: Colors.black54),
-                                )
-                              : null,
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.edit,
-                                  color: Colors.blue,
-                                ),
-                                onPressed: () {
-                                  _editList(realIndex);
-                                },
-                              ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete,
-                                  color: Colors.red,
-                                ),
-                                onPressed: () {
-                                  _konfirmasiHapus(realIndex);
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                          );
+                        },
+                      )
+                    : ReorderableListView.builder(
+                        padding: const EdgeInsets.only(top: 8, bottom: 8),
+                        itemCount: daftarTampil.length,
+                        onReorder: _onReorder,
+                        itemBuilder: (context, index) {
+                          Todo item = daftarTampil[index];
+                          int realIndex = todoList.indexOf(item);
+                          return TaskCard(
+                            key: ObjectKey(item),
+                            item: item,
+                            isGridView: false,
+                            onTap: () => _editList(realIndex),
+                            onCheckboxChanged: (bool? nilaiBaru) {
+                              setState(() {
+                                todoList[realIndex].isSelesai = nilaiBaru!;
+                                _simpanData();
+                              });
+                            },
+                          );
+                        },
+                      ),
           ),
         ],
       ),
