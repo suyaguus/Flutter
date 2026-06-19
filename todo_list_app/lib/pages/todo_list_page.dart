@@ -552,6 +552,138 @@ class _TodoListPageState extends State<TodoListPage> {
     return hasil;
   }
 
+  // --- WIDGET DASHBOARD PROGRESS BAR ---
+  Widget _buildProgressBar() {
+    int totalTugas = todoList.length;
+    // Menghitung berapa banyak tugas yang isSelesai == true
+    int tugasSelesai = todoList.where((t) => t.isSelesai).length;
+    // Menghindari error pembagian dengan nol
+    double progress = totalTugas == 0 ? 0.0 : tugasSelesai / totalTugas;
+
+    // Menyiapkan teks motivasi
+    String pesanTeks = '';
+    if (totalTugas == 0) {
+      pesanTeks = tr(
+        'Belum ada tugas, ayo buat sekarang!',
+        'No tasks yet, create one now!',
+      );
+    } else if (tugasSelesai == totalTugas) {
+      pesanTeks = tr(
+        'Luar biasa! Semua tugas selesai 🎉',
+        'Awesome! All tasks completed 🎉',
+      );
+    } else {
+      pesanTeks = tr(
+        'Anda telah menyelesaikan $tugasSelesai dari $totalTugas tugas.',
+        'You have completed $tugasSelesai of $totalTugas tasks.',
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(left: 16, right: 16, top: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        // Efek Gradasi warna Ungu yang elegan
+        gradient: LinearGradient(
+          colors: [Colors.deepPurple.shade300, Colors.deepPurple.shade800],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.deepPurple.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                tr('Ringkasan Tugas', 'Task Summary'),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Icon(Icons.analytics, color: Colors.white70),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            pesanTeks,
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
+          ),
+          const SizedBox(height: 20),
+
+          // --- Animasi Garis Progres ---
+          TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0, end: progress),
+            duration: const Duration(
+              milliseconds: 1000,
+            ), // Bergerak mulus selama 1 detik
+            curve: Curves.easeOutCubic,
+            builder: (context, value, child) {
+              return Column(
+                children: [
+                  Stack(
+                    children: [
+                      // Rel Belakang (Abu-abu transparan)
+                      Container(
+                        height: 12,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      // Rel Depan (Putih solid yang bergerak memanjang)
+                      FractionallySizedBox(
+                        widthFactor: value,
+                        child: Container(
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.white.withOpacity(0.5),
+                                blurRadius: 6,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Teks Persentase yang ikut berjalan naik/turun
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      '${(value * 100).toInt()}%',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     List<Todo> daftarTampil = listYangDitampilkan;
@@ -581,6 +713,9 @@ class _TodoListPageState extends State<TodoListPage> {
       ),
       body: Column(
         children: [
+          // MEMUNCULKAN DASHBOARD DI SINI
+          _buildProgressBar(),
+
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
