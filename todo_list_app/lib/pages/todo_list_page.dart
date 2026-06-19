@@ -64,9 +64,20 @@ class _TodoListPageState extends State<TodoListPage> {
     DateTime? tanggalDipilih;
     bool isError = false;
 
-    showDialog(
+    // --- MENGGUNAKAN showGeneralDialog UNTUK ANIMASI IN/OUT KUSTOM ---
+    showGeneralDialog(
       context: context,
-      builder: (BuildContext context) {
+      barrierDismissible: true,
+      barrierLabel: 'Tutup Popup',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 400),
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return ScaleTransition(
+          scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+          child: FadeTransition(opacity: animation, child: child),
+        );
+      },
+      pageBuilder: (context, animation, secondaryAnimation) {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             return AlertDialog(
@@ -86,27 +97,82 @@ class _TodoListPageState extends State<TodoListPage> {
                           : null,
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    value: prioritasDipilih,
-                    decoration: InputDecoration(
-                      labelText: tr('Prioritas', 'Priority'),
-                    ),
-                    items: ['Penting', 'Mendesak', 'Tidak Mendesak'].map((
-                      String val,
-                    ) {
-                      return DropdownMenuItem(
-                        value: val,
-                        child: Text(translatePriority(val)),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      setStateDialog(() {
-                        prioritasDipilih = val!;
-                      });
-                    },
+                  const SizedBox(height: 24),
+
+                  // --- MENGGANTI DROPDOWN DENGAN TOMBOL ANIMASI ---
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        tr('Prioritas:', 'Priority:'),
+                        style: const TextStyle(
+                          color: Colors.deepPurple,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: ['Penting', 'Mendesak', 'Tidak Mendesak'].map((
+                          String val,
+                        ) {
+                          bool isSelected = prioritasDipilih == val;
+                          // Menentukan warna tombol berdasarkan prioritas
+                          Color chipColor = val == 'Penting'
+                              ? Colors.red
+                              : (val == 'Mendesak'
+                                    ? Colors.orange
+                                    : Colors.green);
+
+                          return GestureDetector(
+                            onTap: () {
+                              setStateDialog(() {
+                                prioritasDipilih = val;
+                              });
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves
+                                  .easeOutCubic, // Animasi transisi yang halus
+                              padding: EdgeInsets.symmetric(
+                                vertical: isSelected ? 10 : 6,
+                                horizontal: isSelected ? 14 : 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? chipColor
+                                    : Colors.grey.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: chipColor.withOpacity(0.4),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ]
+                                    : [],
+                              ),
+                              child: Text(
+                                translatePriority(val),
+                                style: TextStyle(
+                                  color: isSelected
+                                      ? Colors.white
+                                      : Colors.black87,
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
+
                   TextButton.icon(
                     icon: const Icon(Icons.calendar_today),
                     label: Text(
@@ -194,27 +260,16 @@ class _TodoListPageState extends State<TodoListPage> {
 
     showGeneralDialog(
       context: context,
-      barrierDismissible:
-          true, // Agar bisa ditutup dengan menekan di luar kotak
+      barrierDismissible: true,
       barrierLabel: 'Tutup Popup',
-      barrierColor: Colors.black54, // Latar belakang menjadi lebih gelap
-      transitionDuration: const Duration(
-        milliseconds: 400,
-      ), // Durasi animasi (400ms = Sangat Halus)
-      // MENGATUR EFEK ANIMASI IN / OUT
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 400),
       transitionBuilder: (context, animation, secondaryAnimation, child) {
         return ScaleTransition(
-          // Efek membesar (Scale) dengan gaya membal halus (easeOutBack)
           scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
-          child: FadeTransition(
-            // Efek memudar perlahan (Fade)
-            opacity: animation,
-            child: child,
-          ),
+          child: FadeTransition(opacity: animation, child: child),
         );
       },
-
-      // ISI DARI POPUP (Sama seperti sebelumnya)
       pageBuilder: (context, animation, secondaryAnimation) {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
@@ -235,27 +290,80 @@ class _TodoListPageState extends State<TodoListPage> {
                           : null,
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    value: prioritasDipilih,
-                    decoration: InputDecoration(
-                      labelText: tr('Prioritas', 'Priority'),
-                    ),
-                    items: ['Penting', 'Mendesak', 'Tidak Mendesak'].map((
-                      String val,
-                    ) {
-                      return DropdownMenuItem(
-                        value: val,
-                        child: Text(translatePriority(val)),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      setStateDialog(() {
-                        prioritasDipilih = val!;
-                      });
-                    },
+                  const SizedBox(height: 24),
+
+                  // --- MENGGANTI DROPDOWN DENGAN TOMBOL ANIMASI ---
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        tr('Prioritas:', 'Priority:'),
+                        style: const TextStyle(
+                          color: Colors.deepPurple,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: ['Penting', 'Mendesak', 'Tidak Mendesak'].map(
+                          (String val) {
+                            bool isSelected = prioritasDipilih == val;
+                            Color chipColor = val == 'Penting'
+                                ? Colors.red
+                                : (val == 'Mendesak'
+                                      ? Colors.orange
+                                      : Colors.green);
+
+                            return GestureDetector(
+                              onTap: () {
+                                setStateDialog(() {
+                                  prioritasDipilih = val;
+                                });
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeOutCubic,
+                                padding: EdgeInsets.symmetric(
+                                  vertical: isSelected ? 10 : 6,
+                                  horizontal: isSelected ? 14 : 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? chipColor
+                                      : Colors.grey.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: isSelected
+                                      ? [
+                                          BoxShadow(
+                                            color: chipColor.withOpacity(0.4),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ]
+                                      : [],
+                                ),
+                                child: Text(
+                                  translatePriority(val),
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.black87,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ).toList(),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
+
                   TextButton.icon(
                     icon: const Icon(Icons.calendar_today),
                     label: Text(
@@ -282,21 +390,18 @@ class _TodoListPageState extends State<TodoListPage> {
                   ),
                 ],
               ),
-              // Mengatur posisi tombol agar Hapus di kiri, dan Batal/Simpan di kanan
               actionsAlignment: MainAxisAlignment.spaceBetween,
               actions: [
-                // 1. Tombol Hapus yang baru dipindah
                 TextButton(
                   onPressed: () {
-                    Navigator.of(context).pop(); // Tutup popup edit dulu
-                    _konfirmasiHapus(index); // Panggil fungsi hapus
+                    Navigator.of(context).pop();
+                    _konfirmasiHapus(index);
                   },
                   child: Text(
                     tr('Hapus', 'Delete'),
                     style: const TextStyle(color: Colors.red),
                   ),
                 ),
-                // 2. Tombol Batal & Simpan
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -337,9 +442,28 @@ class _TodoListPageState extends State<TodoListPage> {
   }
 
   void _konfirmasiHapus(int index) {
-    showDialog(
+    // --- MENGGUNAKAN showGeneralDialog UNTUK ANIMASI KUSTOM ---
+    showGeneralDialog(
       context: context,
-      builder: (BuildContext context) {
+      barrierDismissible: true, // Bisa ditutup dengan ketuk di luar
+      barrierLabel: 'Tutup Popup',
+      barrierColor: Colors.black54, // Latar belakang redup
+      transitionDuration: const Duration(milliseconds: 400), // Durasi halus
+      // MENGATUR EFEK ANIMASI IN / OUT
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return ScaleTransition(
+          // Efek membesar (Scale) dengan pantulan (easeOutBack)
+          scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+          child: FadeTransition(
+            // Efek memudar perlahan (Fade)
+            opacity: animation,
+            child: child,
+          ),
+        );
+      },
+
+      // ISI DARI POPUP (Sama seperti sebelumnya)
+      pageBuilder: (context, animation, secondaryAnimation) {
         return AlertDialog(
           title: Text(tr('Hapus Tugas?', 'Delete Task?')),
           content: Text(
