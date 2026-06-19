@@ -562,10 +562,10 @@ class _TodoListPageState extends State<TodoListPage> {
 
                       return Card(
                         color: item.prioritas == 'Penting'
-                            ? Colors.red.withOpacity(0.2)
+                            ? Colors.red.shade50
                             : (item.prioritas == 'Mendesak'
-                                  ? Colors.orange.withOpacity(0.2)
-                                  : Colors.green.withOpacity(0.2)),
+                                  ? Colors.orange.shade50
+                                  : Colors.green.shade50),
                         margin: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 8,
