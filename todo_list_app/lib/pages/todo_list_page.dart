@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/todo.dart';
 import 'settings_page.dart';
 import '../main.dart'; // Impor untuk mengambil fungsi tr()
+import 'package:reorderable_grid_view/reorderable_grid_view.dart';
 
 class TodoListPage extends StatefulWidget {
   const TodoListPage({super.key});
@@ -811,8 +812,34 @@ class _TodoListPageState extends State<TodoListPage> {
     );
   }
   // --- WIDGET CARD UNTUK GRID & LIST ---
+  // --- FUNGSI REORDER (SERET DAN SUSUN) ---
+  void _onReorder(int oldIndex, int newIndex) {
+    if (searchQuery.isNotEmpty || filterPrioritas != 'Semua' || sortDeadlineTerdekat) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            tr('Tidak bisa menyusun saat filter/pencarian aktif!', 'Cannot reorder while filtering/searching!'),
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      if (newIndex > oldIndex) {
+        newIndex -= 1; // Penyesuaian indeks karena item dihapus dulu
+      }
+      final Todo item = todoList.removeAt(oldIndex);
+      todoList.insert(newIndex, item);
+      _simpanData();
+    });
+  }
+
+  // --- WIDGET CARD UNTUK GRID & LIST ---
   Widget _buildTaskCard(Todo item, int realIndex) {
     return Card(
+      key: ObjectKey(item),
       color: item.prioritas == 'Penting'
           ? Colors.red.shade50
           : (item.prioritas == 'Mendesak'
@@ -825,7 +852,7 @@ class _TodoListPageState extends State<TodoListPage> {
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
-        onLongPress: () => _editList(realIndex),
+        onTap: () => _editList(realIndex),
         borderRadius: BorderRadius.circular(12),
         child: isGridView
             ? Padding(
@@ -1100,22 +1127,24 @@ class _TodoListPageState extends State<TodoListPage> {
                     ),
                   )
                 : isGridView
-                    ? GridView.builder(
+                    ? ReorderableGridView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2, // 2 Kolom
                           childAspectRatio: 1.1, // Agar kotak tidak terlalu pipih
                         ),
                         itemCount: daftarTampil.length,
+                        onReorder: _onReorder,
                         itemBuilder: (context, index) {
                           Todo item = daftarTampil[index];
                           int realIndex = todoList.indexOf(item);
                           return _buildTaskCard(item, realIndex);
                         },
                       )
-                    : ListView.builder(
+                    : ReorderableListView.builder(
                         padding: const EdgeInsets.only(top: 8, bottom: 8),
                         itemCount: daftarTampil.length,
+                        onReorder: _onReorder,
                         itemBuilder: (context, index) {
                           Todo item = daftarTampil[index];
                           int realIndex = todoList.indexOf(item);
