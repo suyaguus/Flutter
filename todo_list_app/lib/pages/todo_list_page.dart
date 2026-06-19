@@ -261,32 +261,51 @@ class _TodoListPageState extends State<TodoListPage> {
                   ),
                 ],
               ),
+              // Mengatur posisi tombol agar Hapus di kiri, dan Batal/Simpan di kanan
+              actionsAlignment: MainAxisAlignment.spaceBetween,
               actions: [
+                // 1. Tombol Hapus yang baru dipindah
                 TextButton(
                   onPressed: () {
-                    _taskController.clear();
-                    Navigator.of(context).pop();
+                    Navigator.of(context).pop(); // Tutup popup edit dulu
+                    _konfirmasiHapus(index); // Panggil fungsi hapus
                   },
-                  child: Text(tr('Batal', 'Cancel')),
+                  child: Text(
+                    tr('Hapus', 'Delete'),
+                    style: const TextStyle(color: Colors.red),
+                  ),
                 ),
-                TextButton(
-                  onPressed: () {
-                    if (_taskController.text.trim().isEmpty) {
-                      setStateDialog(() {
-                        isError = true;
-                      });
-                    } else {
-                      setState(() {
-                        todoList[index].judul = _taskController.text;
-                        todoList[index].prioritas = prioritasDipilih;
-                        todoList[index].deadline = tanggalDipilih;
-                        _simpanData();
-                      });
-                      _taskController.clear();
-                      Navigator.of(context).pop();
-                    }
-                  },
-                  child: Text(tr('Simpan', 'Save')),
+                // 2. Tombol Batal & Simpan
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        _taskController.clear();
+                        Navigator.of(context).pop();
+                      },
+                      child: Text(tr('Batal', 'Cancel')),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        if (_taskController.text.trim().isEmpty) {
+                          setStateDialog(() {
+                            isError = true;
+                          });
+                        } else {
+                          setState(() {
+                            todoList[index].judul = _taskController.text;
+                            todoList[index].prioritas = prioritasDipilih;
+                            todoList[index].deadline = tanggalDipilih;
+                            _simpanData();
+                          });
+                          _taskController.clear();
+                          Navigator.of(context).pop();
+                        }
+                      },
+                      child: Text(tr('Simpan', 'Save')),
+                    ),
+                  ],
                 ),
               ],
             );
@@ -575,6 +594,10 @@ class _TodoListPageState extends State<TodoListPage> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: ListTile(
+                          // Sensor untuk mendeteksi "Tahan Lama" (sekitar setengah hingga 1 detik)
+                          onLongPress: () {
+                            _editList(realIndex); // Buka popup detail
+                          },
                           leading: Checkbox(
                             value: item.isSelesai,
                             side: const BorderSide(
@@ -603,29 +626,7 @@ class _TodoListPageState extends State<TodoListPage> {
                                   style: const TextStyle(color: Colors.black54),
                                 )
                               : null,
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.edit,
-                                  color: Colors.blue,
-                                ),
-                                onPressed: () {
-                                  _editList(realIndex);
-                                },
-                              ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete,
-                                  color: Colors.red,
-                                ),
-                                onPressed: () {
-                                  _konfirmasiHapus(realIndex);
-                                },
-                              ),
-                            ],
-                          ),
+                          // PENTING: Bagian 'trailing' yang berisi ikon edit dan hapus sudah kita hapus sepenuhnya!
                         ),
                       );
                     },
