@@ -192,9 +192,30 @@ class _TodoListPageState extends State<TodoListPage> {
       prioritasDipilih = 'Tidak Mendesak';
     }
 
-    showDialog(
+    showGeneralDialog(
       context: context,
-      builder: (BuildContext context) {
+      barrierDismissible:
+          true, // Agar bisa ditutup dengan menekan di luar kotak
+      barrierLabel: 'Tutup Popup',
+      barrierColor: Colors.black54, // Latar belakang menjadi lebih gelap
+      transitionDuration: const Duration(
+        milliseconds: 400,
+      ), // Durasi animasi (400ms = Sangat Halus)
+      // MENGATUR EFEK ANIMASI IN / OUT
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return ScaleTransition(
+          // Efek membesar (Scale) dengan gaya membal halus (easeOutBack)
+          scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+          child: FadeTransition(
+            // Efek memudar perlahan (Fade)
+            opacity: animation,
+            child: child,
+          ),
+        );
+      },
+
+      // ISI DARI POPUP (Sama seperti sebelumnya)
+      pageBuilder: (context, animation, secondaryAnimation) {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             return AlertDialog(
