@@ -489,6 +489,7 @@ class _TodoListPageState extends State<TodoListPage> {
                           );
                         }
                         // JIKA INPUTAN BENAR:
+                        // JIKA INPUTAN BENAR:
                         else {
                           setState(() {
                             todoList[index].judul = _taskController.text;
@@ -498,6 +499,39 @@ class _TodoListPageState extends State<TodoListPage> {
                           });
                           _taskController.clear();
                           Navigator.of(context).pop();
+
+                          // --- TAMPILKAN SNACKBAR SUKSES HIJAU ---
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor:
+                                  Colors.green.shade600, // Warna Hijau Sukses
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              content: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.check_circle_outline,
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      tr(
+                                        'Tugas berhasil diperbarui!',
+                                        'Task successfully updated!',
+                                      ),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
                         }
                       },
                       child: Text(tr('Simpan', 'Save')),
